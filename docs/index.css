@@ -456,3 +456,56 @@ footer {
     width: 6px;
   }
 }
+
+.cli-section {
+  padding: 80px 20px;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 20px;
+  margin: 40px auto;
+  max-width: 1000px;
+}
+.terminal-window {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 20px;
+  font-family: "Courier New", Courier, monospace;
+  position: relative;
+  border: 1px solid #334155;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+.terminal-header {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.red {
+  background: #ff5f56;
+}
+.yellow {
+  background: #ffbd2e;
+}
+.green {
+  background: #27c93f;
+}
+.command {
+  color: #38bdf8;
+  margin-bottom: 10px;
+}
+.output {
+  color: #94a3b8;
+}
+.cli-badge {
+  background: #e11d48;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  margin-bottom: 15px;
+  display: inline-block;
+}
