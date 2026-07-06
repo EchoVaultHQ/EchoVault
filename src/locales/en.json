@@ -194,5 +194,9 @@
     "cancel": "Cancel",
     "create": "Create",
     "back": "Back"
+  },
+
+  "enhance": {
+    "enhanceToFlac": "Enhance to FLAC (AI)"
   }
 }

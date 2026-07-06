@@ -61,6 +61,23 @@ export default defineConfig({
         } else {
           console.warn("schema.sql not found at:", src)
         }
+
+        // copy the enhancer download manifest so downloader.js can resolve it
+        // via __dirname (same strategy initDB uses for schema.sql)
+        const manifestSrc = resolve(__dirname, "enhancer-manifest.json")
+        const manifestDest = resolve(
+          __dirname,
+          ".vite/build/enhancer-manifest.json"
+        )
+        if (fs.existsSync(manifestSrc)) {
+          fs.copyFileSync(manifestSrc, manifestDest)
+          console.log(
+            "Copied enhancer-manifest.json to build folder at :",
+            manifestSrc
+          )
+        } else {
+          console.warn("enhancer-manifest.json not found at:", manifestSrc)
+        }
       },
     },
   ],

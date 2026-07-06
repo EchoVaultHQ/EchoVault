@@ -44,6 +44,7 @@
 import { ref, onMounted, nextTick, watch } from "vue"
 import { useSearchStore } from "../store/search.js"
 import { usePlayerStore } from "../store/player.js"
+import { useEnhanceStore } from "../store/enhance.js"
 import { useI18n } from "vue-i18n"
 import TrackList from "./TrackList.vue"
 import TrackGrid from "./TrackGrid.vue"
@@ -55,6 +56,13 @@ const viewMode = ref("list")
 
 const search = useSearchStore()
 const player = usePlayerStore()
+const enhance = useEnhanceStore()
+
+// Reload the list when an enhancement finishes so the new FLAC appears.
+watch(
+  () => enhance.completedCount,
+  () => loadTracks()
+)
 
 // watcher for search
 watch(

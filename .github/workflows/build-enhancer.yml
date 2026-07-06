@@ -1,0 +1,110 @@
+name: Build Audio Enhancer
+
+# Freezes onnx/inference.py into a standalone per-OS binary (PyInstaller), self-tests
+# it against the committed model, and publishes it + the model/config as release
+# assets. The Electron app downloads these on first use (see downloader.js).
+#
+# Trigger with a tag push `enhancer-v*` to publish, or run manually (workflow_dispatch)
+# to build + self-test without releasing.
+
+on:
+  push:
+    tags:
+      - "enhancer-v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            asset: echovault-enhancer-linux
+          - os: windows-latest
+            asset: echovault-enhancer-win.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout (with LFS model)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r onnx/requirements.txt pyinstaller
+
+      - name: Freeze inference.py
+        run: |
+          pyinstaller --onefile onnx/inference.py \
+            --name echovault-enhancer \
+            --collect-all soundfile \
+            --collect-all onnxruntime \
+            --collect-all scipy
+
+      - name: Locate + rename binary
+        id: bin
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            SRC="dist/echovault-enhancer.exe"
+          else
+            SRC="dist/echovault-enhancer"
+          fi
+          mv "$SRC" "dist/${{ matrix.asset }}"
+          echo "path=dist/${{ matrix.asset }}" >> "$GITHUB_OUTPUT"
+
+      - name: Self-test (fails the build if inference is broken)
+        run: |
+          "./${{ steps.bin.outputs.path }}" \
+            --model onnx/exported/model.onnx \
+            --config onnx/exported/config.json \
+            --self-test
+
+      - name: Compute checksum for manifest
+        run: |
+          BIN="${{ steps.bin.outputs.path }}"
+          SHA=$(python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$BIN")
+          BYTES=$(python -c "import os,sys;print(os.path.getsize(sys.argv[1]))" "$BIN")
+          {
+            echo "### ${{ matrix.asset }}"
+            echo ""
+            echo "Paste into enhancer-manifest.json (binary.${{ runner.os == 'Windows' && 'win32' || 'linux' }}):"
+            echo '```json'
+            echo "\"file\": \"${{ matrix.asset }}\", \"sha256\": \"$SHA\", \"bytes\": $BYTES"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish binary to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.asset }}
+
+  publish-model:
+    # Upload the model + config once (they're platform-independent). Runs only on a
+    # tag push, after the binaries have been built and self-tested.
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout (with LFS model)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Publish model + config to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            onnx/exported/model.onnx
+            onnx/exported/config.json

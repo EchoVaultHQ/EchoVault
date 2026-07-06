@@ -178,5 +178,9 @@
       "version": "バージョン {version}",
       "appDescription": "Electron で構築された、モダンで高音質な音楽プレーヤー"
     }
+  },
+
+  "enhance": {
+    "enhanceToFlac": "FLAC に高音質化 (AI)"
   }
 }

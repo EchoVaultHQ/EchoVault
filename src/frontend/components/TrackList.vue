@@ -49,7 +49,10 @@
           <!-- Duration + 3 Dots Button -->
           <td class="duration-col">
             <div class="duration-wrapper">
-              <span>{{ formatDuration(track.duration) }}</span>
+              <span v-if="enhanceStore.isEnhancing(track.id)" class="enhance-progress">
+                {{ enhanceLabel(track.id) }}
+              </span>
+              <span v-else>{{ formatDuration(track.duration) }}</span>
 
               <button
                 class="more-btn"
@@ -72,6 +75,15 @@
                 @click.stop="removeFromPlaylist(track)"
               >
                 Remove from this playlist
+              </div>
+
+              <!-- Enhance to FLAC (AI) -->
+              <div
+                class="dropdown-item"
+                :class="{ disabled: enhanceStore.isEnhancing(track.id) }"
+                @click.stop="enhanceTrack(track)"
+              >
+                {{ $t("enhance.enhanceToFlac") }}
               </div>
 
               <!-- Add to playlist -->
@@ -109,6 +121,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue"
+import { useEnhanceStore } from "../store/enhance.js"
+
+const enhanceStore = useEnhanceStore()
 
 const props = defineProps({
   tracks: Array,
@@ -163,6 +178,18 @@ function addTrackToPlaylist(track, playlistId) {
     "success"
   )
   closeMenu()
+}
+
+function enhanceTrack(track) {
+  closeMenu()
+  enhanceStore.enhance(track)
+}
+
+function enhanceLabel(id) {
+  const p = enhanceStore.progress[id]
+  if (!p) return ""
+  const icon = p.phase === "download" ? "⬇" : "✨"
+  return p.pct == null ? icon : `${icon} ${p.pct}%`
 }
 
 function removeFromPlaylist(track) {
@@ -237,6 +264,13 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.enhance-progress {
+  color: var(--accent);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Track Row */

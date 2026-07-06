@@ -28,6 +28,25 @@ contextBridge.exposeInMainWorld("api", {
   getFileSize: (trackPath) =>
     ipcRenderer.invoke("player:getFileSize", trackPath),
 
+  // audio enhancement (mp3 -> flac via ONNX subprocess)
+  enhanceTrack: (trackId) => ipcRenderer.invoke("enhance:track", trackId),
+  enhanceCheckReady: () => ipcRenderer.invoke("enhance:check-ready"),
+  onEnhanceProgress: (cb) => {
+    const handler = (_e, data) => cb(data)
+    ipcRenderer.on("enhance:progress", handler)
+    return () => ipcRenderer.removeListener("enhance:progress", handler)
+  },
+  onEnhanceDone: (cb) => {
+    const handler = (_e, data) => cb(data)
+    ipcRenderer.on("enhance:done", handler)
+    return () => ipcRenderer.removeListener("enhance:done", handler)
+  },
+  onEnhanceError: (cb) => {
+    const handler = (_e, data) => cb(data)
+    ipcRenderer.on("enhance:error", handler)
+    return () => ipcRenderer.removeListener("enhance:error", handler)
+  },
+
   // toast
   showToast: (message, type = "info") => {
     document.dispatchEvent(

@@ -28,6 +28,8 @@ export const GET_TRACK_PATHS_BY_FOLDER = `
 export const CHECK_TRACK_EXISTS = `
   SELECT 1 FROM tracks WHERE file_path=?
 `
+export const GET_TRACK_BY_ID = `SELECT * FROM tracks WHERE id=?`
+export const GET_TRACK_BY_PATH = `SELECT * FROM tracks WHERE file_path=?`
 export const UPSERT_TRACK = `
   INSERT INTO tracks (
     folder_id, artist_id, file_path, title, album, artist, duration, cover
