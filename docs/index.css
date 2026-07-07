@@ -306,8 +306,8 @@ footer {
 
 .screenshots {
   max-width: 1400px;
-  margin: 4rem auto 2rem;
-  padding: 0 3rem;
+  margin: 4rem auto;
+  padding: 0 3rem 4rem;
 }
 
 .section-title {
@@ -322,27 +322,58 @@ footer {
 
 .screenshot-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
 }
 
-.screenshot-gallery img {
-  width: 100%;
-  height: auto;
+.screenshot-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  object-fit: cover;
-  background: #111;
-  padding: 4px;
-
+  padding: 1rem;
   transition: all 0.3s ease;
-  cursor: pointer;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-/* Hover effect */
-.screenshot-gallery img:hover {
-  transform: scale(1.03);
+.screenshot-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(102, 126, 234, 0.4);
   box-shadow: 0 15px 35px rgba(102, 126, 234, 0.25);
+}
+
+.screenshot-card .terminal-header {
+  margin-bottom: 0.75rem;
+}
+
+.screenshot-card img {
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #111;
+  cursor: pointer;
+}
+
+.screenshot-card figcaption {
+  margin-top: 0.75rem;
+  color: #a1a1aa;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .section-divider {
@@ -455,6 +486,22 @@ footer {
   .bar {
     width: 6px;
   }
+
+  .screenshot-card img {
+    height: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .screenshots,
+  .features {
+    padding: 0 1.25rem 4rem;
+  }
+
+  .screenshot-gallery,
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .cli-section {
@@ -462,7 +509,7 @@ footer {
   background: #0f172a;
   color: #f8fafc;
   border-radius: 20px;
-  margin: 40px auto;
+  margin: 4rem auto;
   max-width: 1000px;
 }
 .terminal-window {
