@@ -98,7 +98,8 @@
     "allTime": "累計",
     "unknownArtist": "不明なアーティスト",
     "plays": "回再生",
-    "noTrackSelected": "曲が選択されていません"
+    "noTrackSelected": "曲が選択されていません",
+    "noLyricsFound": "歌詞が見つかりません"
   },
 
   "settings": {
@@ -151,6 +152,10 @@
     "audio": {
       "title": "オーディオ設定",
       "description": "再生とイコライザの設定を行います",
+      "onlineLyrics": {
+        "title": "歌詞をオンラインで取得",
+        "description": "ローカルで見つからない場合、同期歌詞をオンラインで自動検索します"
+      },
       "equalizer": {
         "title": "イコライザ",
         "description": "音域を調整して好みの音にします"

@@ -10,8 +10,8 @@ contextBridge.exposeInMainWorld("api", {
 
   // tracks
   getTracks: () => ipcRenderer.invoke("tracks:get-tracks"),
-  getEmbeddedLyrics: (filePath) =>
-    ipcRenderer.invoke("tracks:get-embedded-lyrics", filePath),
+  getLyrics: (filePath, options) =>
+    ipcRenderer.invoke("tracks:get-lyrics", filePath, options),
   toggleLike: (trackId, isLiked) =>
     ipcRenderer.invoke("tracks:updateLike", trackId, isLiked),
   getLikedTracks: () => ipcRenderer.invoke("tracks:get-liked-tracks"),
