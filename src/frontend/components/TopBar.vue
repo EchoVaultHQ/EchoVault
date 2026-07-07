@@ -87,13 +87,6 @@ const showDropdown = ref(false)
 const searchStore = useSearchStore()
 const localQuery = ref(searchStore.query)
 
-// Accent color stuff (unchanged)
-const accentColors = [
-  { name: "Purple", value: "#8e44ad" },
-  /* ... */ { name: "Teal", value: "#1abc9c" },
-]
-const activeAccent = ref(localStorage.getItem("accentColor") || "#8e44ad")
-
 // Localize
 const { locale } = useI18n()
 const currentLocale = ref(localStorage.getItem("locale") || "en")
@@ -118,41 +111,6 @@ const toggleLanguage = () => {
 // THEME: expose computed for UI
 const isDarkMode = computed(() => themeStore.theme === "dark")
 const toggleTheme = () => themeStore.toggleTheme()
-
-// Accent color logic unchanged
-const setAccent = (color) => {
-  document.documentElement.style.setProperty("--accent", color)
-  document.documentElement.style.setProperty(
-    "--accent-hover",
-    adjustBrightness(color, 1.15)
-  )
-  document.documentElement.style.setProperty(
-    "--hover-bg",
-    hexToRgba(color, 0.2)
-  )
-  localStorage.setItem("accentColor", color)
-  activeAccent.value = color
-  showDropdown.value = false
-}
-
-// Utils: hexToRgba & adjustBrightness (copy your implementations)
-function hexToRgba(hex, alpha = 0.25) {
-  const c = hex.replace("#", "")
-  const r = parseInt(c.substring(0, 2), 16)
-  const g = parseInt(c.substring(2, 4), 16)
-  const b = parseInt(c.substring(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-function adjustBrightness(hex, factor) {
-  const col = hex.replace("#", "")
-  const r = parseInt(col.substring(0, 2), 16)
-  const g = parseInt(col.substring(2, 4), 16)
-  const b = parseInt(col.substring(4, 6), 16)
-  const newR = Math.min(255, Math.floor(r * factor))
-  const newG = Math.min(255, Math.floor(g * factor))
-  const newB = Math.min(255, Math.floor(b * factor))
-  return `rgb(${newR}, ${newG}, ${newB})`
-}
 
 // iconFilter now depends on computed isDarkMode
 const iconFilter = computed(() => ({
@@ -182,10 +140,6 @@ onMounted(() => {
   // language
   const savedLang = localStorage.getItem("locale")
   if (savedLang) setLanguage(savedLang)
-
-  // accent
-  const savedColor = localStorage.getItem("accentColor")
-  if (savedColor) setAccent(savedColor)
 
   document.addEventListener("click", handleClickOutside)
 })

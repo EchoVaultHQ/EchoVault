@@ -135,11 +135,9 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     log.info("main :: All windows closed - quitting app")
     app.quit()
-    app.exit(0)
   }
 })
 
 app.on("before-quit", () => {
-  log.info("main :: App quitting - cleaning up windows")
-  BrowserWindow.getAllWindows().forEach((win) => win.destroy())
+  log.info("main :: App quitting")
 })

@@ -2,6 +2,12 @@
 const savedTheme = localStorage.getItem("theme") || "dark"
 document.documentElement.setAttribute("data-theme", savedTheme)
 
+// set accent color before Vue app mounts (fixes flash of default accent)
+const savedAccent = localStorage.getItem("accentColor")
+if (savedAccent) {
+  document.documentElement.style.setProperty("--accent", savedAccent)
+}
+
 import { createApp } from "vue"
 import { createPinia } from "pinia"
 import App from "./frontend/App.vue"

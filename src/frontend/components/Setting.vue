@@ -83,15 +83,15 @@
                 </div>
                 <div class="color-grid">
                   <div
-                    v-for="color in accentColors"
+                    v-for="color in accentStore.accentColors"
                     :key="color.key"
-                    @click="setAccent(color.value)"
+                    @click="accentStore.setAccent(color.value)"
                     class="color-swatch"
-                    :class="{ active: activeAccent === color.value }"
+                    :class="{ active: accentStore.accentColor === color.value }"
                     :style="{ background: color.value }"
                   >
                     <i
-                      v-if="activeAccent === color.value"
+                      v-if="accentStore.accentColor === color.value"
                       class="fa-solid fa-check"
                     ></i>
                   </div>
@@ -278,6 +278,7 @@
 import { ref, onMounted, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { useThemeStore } from "../store/theme.js"
+import { useAccentStore } from "../store/accent.js"
 
 const props = defineProps({
   showSettingMenu: {
@@ -288,6 +289,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close"])
 const themeStore = useThemeStore()
+const accentStore = useAccentStore()
 const { locale, t } = useI18n()
 
 const activeTab = ref("appearance")
@@ -295,9 +297,8 @@ const activeTab = ref("appearance")
 // use store for theme
 const isDarkMode = computed(() => themeStore.theme === "dark")
 
-// locale + accent
+// locale
 const currentLocale = ref(localStorage.getItem("locale") || "en")
-const activeAccent = ref(localStorage.getItem("accentColor") || "#3498db") // deafult to blue override here
 
 const tabs = [
   {
@@ -323,17 +324,6 @@ const tabs = [
   },
 ]
 
-const accentColors = [
-  { key: "blue", value: "#3498db" },
-  { key: "purple", value: "#8e44ad" },
-  { key: "green", value: "#27ae60" },
-  { key: "orange", value: "#e67e22" },
-  { key: "pink", value: "#e84393" },
-  { key: "red", value: "#c0392b" },
-  { key: "teal", value: "#1abc9c" },
-  { key: "indigo", value: "#6c5ce7" },
-]
-
 const version = "1.0.1-beta"
 
 const setTheme = (theme) => {
@@ -351,54 +341,12 @@ const setLanguage = (lang) => {
   localStorage.setItem("locale", lang)
 }
 
-// accent
-const setAccent = (color) => {
-  document.documentElement.style.setProperty("--accent", color)
-  document.documentElement.style.setProperty(
-    "--accent-hover",
-    adjustBrightness(color, 1.15)
-  )
-  document.documentElement.style.setProperty(
-    "--hover-bg",
-    hexToRgba(color, 0.2)
-  )
-  localStorage.setItem("accentColor", color)
-  activeAccent.value = color
-}
-
-// utils
-function hexToRgba(hex, alpha = 0.25) {
-  const c = hex.replace("#", "")
-  const r = parseInt(c.substring(0, 2), 16)
-  const g = parseInt(c.substring(2, 4), 16)
-  const b = parseInt(c.substring(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-function adjustBrightness(hex, factor) {
-  const col = hex.replace("#", "")
-  const r = parseInt(col.substring(0, 2), 16)
-  const g = parseInt(col.substring(2, 4), 16)
-  const b = parseInt(col.substring(4, 6), 16)
-  const newR = Math.min(255, Math.floor(r * factor))
-  const newG = Math.min(255, Math.floor(g * factor))
-  const newB = Math.min(255, Math.floor(b * factor))
-  return `rgb(${newR}, ${newG}, ${newB})`
-}
-
 onMounted(() => {
-  // keep locale and accent initialization here (theme is initialized in store)
+  // keep locale initialization here (theme + accent are initialized in their stores)
   const savedLang = localStorage.getItem("locale")
   if (savedLang) {
     currentLocale.value = savedLang
     locale.value = savedLang
-  }
-
-  const savedColor = localStorage.getItem("accentColor")
-  if (savedColor) {
-    activeAccent.value = savedColor
-    // optionally re-apply CSS variables on mount:
-    setAccent(savedColor)
   }
 })
 </script>
