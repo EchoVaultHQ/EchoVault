@@ -1,0 +1,19 @@
+{
+  "repo": "https://github.com/rohan-prasen/audioreconstruction",
+  "ref": "e3fa14ad0cc8479dea0b4bda9f49b740c6f4d904",
+  "note": "Pinned to a commit SHA, not 'main' branch, since upstream has no tags/releases. Upstream's own onnx/manifest.json ships with empty sha256/bytes placeholders, so these values were independently verified: model.onnx's oid/size come straight from its Git LFS pointer at this commit; config.json's sha256 was computed after fetching it at this commit (it is not LFS-tracked).",
+  "files": {
+    "model.onnx": {
+      "path": "onnx/exported/model.onnx",
+      "lfs": true,
+      "sha256": "b08db07825ebb164a927e9ef50dc5e566d1c13c0515af039fc2350b7a523c379",
+      "bytes": 112608277
+    },
+    "config.json": {
+      "path": "onnx/exported/config.json",
+      "lfs": false,
+      "sha256": "d626b738e5641adc7efcaba4d5aaf089a46ca897327e23c92e65cff51a60b539",
+      "bytes": 280
+    }
+  }
+}

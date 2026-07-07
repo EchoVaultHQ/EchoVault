@@ -40,6 +40,7 @@ export const usePlayerStore = defineStore("player", {
       const clonedTrack = { ...track } // Make a copy
       this.currentTrack = clonedTrack
       this.lyrics = null // Reset lyrics
+      this.getLyrics() // Fire-and-forget, don't block playback start
       this.isPlaying = true
 
       // Add to queue
@@ -311,18 +312,31 @@ export const usePlayerStore = defineStore("player", {
 
     async getLyrics() {
       if (!this.currentTrack?.file_path) {
-        console.warn("No track loaded cannot extract lyrics.")
         return
       }
 
+      const filePath = this.currentTrack.file_path
+      const fetchOnline = localStorage.getItem("fetchLyricsOnline") !== "false"
+
       try {
-        const lyrics = await window.api.getEmbeddedLyrics(
-          this.currentTrack.file_path
-        )
-        this.lyrics = lyrics || "No lyrics found."
+        const lyrics = await window.api.getLyrics(filePath, { fetchOnline })
+        if (lyrics?.text) {
+          console.log(
+            `[lyrics] found via "${lyrics.source}" (synced: ${lyrics.synchronized}) for ${filePath}`
+          )
+        } else {
+          const reasonSuffix = lyrics?.reason ? ` (reason: ${lyrics.reason})` : ""
+          console.log(`[lyrics] no lyrics found for ${filePath}${reasonSuffix}`)
+        }
+        // Track may have changed again while this was in flight
+        if (this.currentTrack.file_path === filePath) {
+          this.lyrics = lyrics
+        }
       } catch (err) {
         console.error("Failed to read lyrics:", err)
-        this.lyrics = null
+        if (this.currentTrack.file_path === filePath) {
+          this.lyrics = null
+        }
       }
     },
 
@@ -438,6 +452,18 @@ export const usePlayerStore = defineStore("player", {
       }
 
       window.api.info("======================")
+    },
+
+    // Frame-accurate playback position, independent of the 200ms progress-bar
+    // interval — used for lyric sync, which needs finer-grained updates.
+    getLiveTime() {
+      if (!this.isPlaying || !currentSource || !currentAudioBuffer) {
+        return this.currentTime
+      }
+      return Math.min(
+        audioCtx.currentTime - _playStartTime,
+        currentAudioBuffer.duration
+      )
     },
 
     startProgressUpdater() {

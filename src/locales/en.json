@@ -96,7 +96,8 @@
     "plays": "plays",
     "noTrackSelected": "No track selected",
     "tracks": "tracks",
-    "noPlaylists": "No playlists"
+    "noPlaylists": "No playlists",
+    "noLyricsFound": "No lyrics found"
   },
 
   "settings": {
@@ -149,6 +150,10 @@
     "audio": {
       "title": "Audio Settings",
       "description": "Configure audio playback and equalizer",
+      "onlineLyrics": {
+        "title": "Fetch lyrics online",
+        "description": "Automatically look up synced lyrics online when none are found locally"
+      },
       "equalizer": {
         "title": "Equalizer",
         "description": "Adjust audio frequencies to your preference"

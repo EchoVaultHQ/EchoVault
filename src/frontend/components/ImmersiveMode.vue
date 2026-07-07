@@ -6,6 +6,8 @@
       alt="Blurred Background Art"
       class="background-blur-img"
     />
+    <div class="background-overlay"></div>
+    <div class="background-vignette"></div>
   </div>
 
   <div class="exit-immersive-mode">
@@ -19,28 +21,52 @@
     </button>
   </div>
 
-  <div class="track-info-center">
-    <div class="track-artwork parallax-wrapper">
-      <img
-        v-if="player.currentTrack?.coverDataUrl"
-        :src="player.currentTrack.coverDataUrl"
-        alt="Album Art"
-        class="track-artwork-img parallax-img"
-      />
-      <img
-        v-else
-        src="../assets/images/default-cover.svg"
-        alt="Album Art"
-        class="track-artwork-img parallax-img"
-      />
+  <div class="immersive-content">
+    <div class="artwork-column">
+      <div class="artwork-wrapper">
+        <img
+          v-if="player.currentTrack?.coverDataUrl"
+          :src="player.currentTrack.coverDataUrl"
+          alt="Album Art"
+          class="artwork-img"
+        />
+        <img
+          v-else
+          src="../assets/images/default-cover.svg"
+          alt="Album Art"
+          class="artwork-img"
+        />
+      </div>
+
+      <h1 class="track-title">
+        {{ player.currentTrack?.title || t("labels.unknownTrack") }}
+      </h1>
+      <h2 class="track-artist">
+        {{ player.currentTrack?.artist || t("labels.unknownArtist") }}
+      </h2>
     </div>
 
-    <h1 class="immersive-title">
-      {{ player.currentTrack?.title || t("labels.unknownTrack") }}
-    </h1>
-    <h2 class="immersive-artist">
-      {{ player.currentTrack?.artist || t("labels.unknownArtist") }}
-    </h2>
+    <div class="lyrics-column">
+      <div v-if="hasLyrics" class="lyrics-scroll-area">
+        <template v-if="player.lyrics.synchronized && player.lyrics.timestamps?.length">
+          <div
+            v-for="slot in visibleWindow"
+            :key="slot.key"
+            class="lyric-line"
+            :class="`dist-${slot.distance}`"
+            v-memo="[slot.line?.text, slot.distance]"
+          >
+            {{ slot.line?.text }}
+          </div>
+        </template>
+        <template v-else>
+          <div v-for="(line, idx) in plainLyricLines" :key="idx" class="lyric-line plain">
+            {{ line }}
+          </div>
+        </template>
+      </div>
+      <div v-else class="no-lyrics">{{ t("labels.noLyricsFound") }}</div>
+    </div>
   </div>
 
   <div class="immersive-playerbar">
@@ -159,9 +185,8 @@
 </template>
 
 <script setup>
-import { computed, watch, onMounted, onUnmounted } from "vue"
+import { computed, ref, watch, onMounted, onUnmounted } from "vue"
 import { usePlayerStore } from "../store/player.js"
-import { useRouter } from "vue-router"
 import {
   Previous,
   Next,
@@ -174,9 +199,8 @@ import {
   Shuffle,
   Repeat,
   RepeatOne,
-  Playlist,
   DesktopLyrics,
-} from "../assets/icons/icons" // Assuming icons are SVG/PNG/etc
+} from "../assets/icons/icons"
 import {
   formatTime,
   useVolumeControl,
@@ -184,12 +208,12 @@ import {
   usePlaybackControls,
   useTrackLike,
   getVolumeIcon,
-} from "../utils/playerUtils.js" // Assuming these utility functions exist
+} from "../utils/playerUtils.js"
 import { useI18n } from "vue-i18n"
 
 const { t } = useI18n()
 const emit = defineEmits(["toggle-queue", "close-immersive-mode"])
-const props = defineProps({
+defineProps({
   isInImmersiveMode: {
     type: Boolean,
     default: false,
@@ -198,7 +222,64 @@ const props = defineProps({
 
 const player = usePlayerStore()
 const isPlaying = computed(() => player.isPlaying)
-const router = useRouter()
+
+const hasLyrics = computed(() => !!player.lyrics?.text)
+const plainLyricLines = computed(() =>
+  (player.lyrics?.text || "").split("\n").filter((line) => line.trim())
+)
+
+// Active line is driven by the actual playback clock (player.getLiveTime(),
+// backed by the Web Audio context — there is no <audio> element in this app)
+// via requestAnimationFrame, not setInterval. The index is only written when
+// it actually changes, so Vue doesn't re-render on every frame.
+const activeIndex = ref(-1)
+let rafHandle = null
+
+function tickLyricSync() {
+  const timestamps = player.lyrics?.timestamps
+  if (timestamps?.length) {
+    const t = player.getLiveTime()
+    const idx = timestamps.findIndex(
+      (line) => t >= line.startTime && t < line.endTime
+    )
+    if (idx !== activeIndex.value) activeIndex.value = idx
+  }
+  rafHandle = requestAnimationFrame(tickLyricSync)
+}
+
+onMounted(() => {
+  rafHandle = requestAnimationFrame(tickLyricSync)
+})
+
+onUnmounted(() => {
+  if (rafHandle) cancelAnimationFrame(rafHandle)
+})
+
+watch(
+  () => player.lyrics,
+  () => {
+    activeIndex.value = -1
+  }
+)
+
+// Render only ±3 lines around the active one (never the whole list) so a
+// long lyric file doesn't mean hundreds of DOM nodes.
+const WINDOW_RADIUS = 3
+const visibleWindow = computed(() => {
+  const timestamps = player.lyrics?.timestamps
+  const active = activeIndex.value
+  const slots = []
+  for (let offset = -WINDOW_RADIUS; offset <= WINDOW_RADIUS; offset++) {
+    const realIdx = active + offset
+    const line = timestamps?.[realIdx]
+    slots.push({
+      key: line ? `line-${realIdx}` : `pad-${offset}`,
+      line,
+      distance: Math.abs(offset),
+    })
+  }
+  return slots
+})
 
 const { volume, onVolumeChange, toggleMute } = useVolumeControl(player)
 const {
@@ -225,141 +306,42 @@ watch(volume, (newVal) => {
 })
 
 const closeImmersiveMode = () => emit("close-immersive-mode")
-
-onMounted(() => {
-  const wrapper = document.querySelector(".parallax-wrapper")
-  const img = document.querySelector(".parallax-img")
-
-  const handleMove = (e) => {
-    const rect = wrapper.getBoundingClientRect()
-    const x = e.clientX - rect.left - rect.width / 2
-    const y = e.clientY - rect.top - rect.height / 2
-
-    const rotateX = (y / rect.height) * -15
-    const rotateY = (x / rect.width) * 15
-
-    img.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(50px)`
-  }
-
-  wrapper.addEventListener("mousemove", handleMove)
-  wrapper.addEventListener("mouseleave", () => {
-    img.style.transform = "rotateX(0deg) rotateY(0deg) translateZ(40px)"
-  })
-})
 </script>
 
 <style scoped>
-/*TODO ::  CLean up the existing styles imported from playerbar.vue*/
-/* --- BASE COMPONENT STYLES (Keep existing structure) --- */
 /* Player bar – includes playback controls, song info, volume */
 
-.draggable {
-  height: 40px;
-  width: 100%; /* Ensure it spans the full width */
-  position: fixed; /* Fix it to the viewport */
-  top: 0;
-  left: 0;
-  z-index: 9999; /* Put it above almost everything else */
-  -webkit-app-region: drag;
-}
-
-/* Player bar layout */
 .player-bar {
   height: 80px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr; /* Left | Center | Right */
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1rem;
   padding: 0 1rem;
-  background-color: #1c1c1c;
-  border-top: 2px solid #282828;
   color: #e5e5e5;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
-/* Left section: song info */
-.song-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-  max-width: 320px;
-  overflow: hidden;
-}
-
-.song-info img {
-  flex-shrink: 0;
-  width: 55px;
-  height: 55px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.song-details {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.song-details p {
-  margin: 0;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #e5e5e5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all 0.3s ease;
-  cursor: default;
-}
-
-/* Scrolling song title on hover */
-.song-details p:hover {
-  animation: scrollText 6s linear infinite;
-}
-
-@keyframes scrollText {
-  0%,
-  10% {
-    transform: translateX(0);
-  }
-  90%,
-  100% {
-    transform: translateX(-60%);
-  }
-}
-
-.song-details small {
-  color: #aaa;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Center section: playback controls */
 .controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 20px;
 }
 
 .play-btn {
-  transform: scale(1.2);
+  transform: scale(1.5);
+  filter: drop-shadow(0 0 5px var(--accent));
   transition:
     transform 0.2s ease,
     filter 0.2s ease;
 }
 
 .play-btn:hover {
-  transform: scale(1.3);
-  filter: drop-shadow(0 0 5px white);
+  transform: scale(1.6);
+  filter: drop-shadow(0 0 8px var(--accent-hover));
 }
 
-/* Right section: utilities and volume */
 .right-section {
   display: flex;
   align-items: center;
@@ -379,7 +361,6 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* Icon buttons */
 .icon-btn {
   background: transparent;
   border: none;
@@ -407,12 +388,15 @@ onMounted(() => {
 .playbar-icon-class {
   width: 18px;
   height: 18px;
-  filter: invert(100%) brightness(200%);
 }
 
 .play-icon {
   width: 26px;
   height: 26px;
+}
+
+.prev-next-btn {
+  transform: scale(1.1);
 }
 
 /* Volume slider */
@@ -424,8 +408,8 @@ onMounted(() => {
   border-radius: 4px;
   background: linear-gradient(
     to right,
-    white 0%,
-    white var(--range-progress, 50%),
+    #e5e5e5 0%,
+    #e5e5e5 var(--range-progress, 50%),
     #3a3a3a var(--range-progress, 50%),
     #3a3a3a 100%
   );
@@ -437,19 +421,13 @@ onMounted(() => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: white;
+  background: #e5e5e5;
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-/* Button states */
 .icon-btn.active img {
   filter: brightness(1.3);
-}
-
-.icon-btn.off img {
-  opacity: 0.6;
 }
 
 .toggle-shuffle img {
@@ -460,41 +438,40 @@ onMounted(() => {
 }
 
 .toggle-shuffle.active img {
-  filter: drop-shadow(0 0 4px var(--accent));
+  filter: drop-shadow(0 0 4px var(--accent-hover));
   opacity: 1;
 }
 
-/* Icon theming by theme mode */
-:root[data-theme="dark"] .playbar-icon-class {
+.icon-btn .playbar-icon-class {
   filter: invert(100%) brightness(200%);
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
 
-:root[data-theme="light"] .playbar-icon-class {
+:root[data-theme="light"] .icon-btn .playbar-icon-class {
   filter: invert(0%) brightness(0%);
 }
 
-/* Hover glow effect */
-:root[data-theme="dark"] .icon-btn:hover img {
-  filter: invert(100%) brightness(200%) drop-shadow(0 0 4px var(--accent-hover));
+.icon-btn:hover .playbar-icon-class {
+  opacity: 1;
 }
 
-:root[data-theme="light"] .icon-btn:hover img {
-  filter: invert(0%) brightness(0%) drop-shadow(0 0 3px var(--accent));
+.icon-btn img.is-liked {
+  filter: drop-shadow(0 0 4px var(--accent));
 }
 
-/* Playback progress bar */
+/* Playback progress bar (relative, inside immersive-progress-container) */
 .progress-bar {
-  position: fixed;
-  bottom: 80px; /* above player bar */
-  left: 0;
-  right: 0;
+  position: relative;
   height: 6px;
-  background: #282828;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
 }
 
 .progress-fill {
   height: 100%;
+  border-radius: 4px;
   background: var(--accent);
   transition: width 0.1s linear;
 }
@@ -526,111 +503,49 @@ onMounted(() => {
   z-index: 10001;
 }
 
-.artist-name {
-  cursor: pointer;
-  text-decoration: underline;
-}
+/* --- IMMERSIVE MODE --- */
 
-.artist-name:hover {
-  opacity: 0.7;
-}
-
-/* General Theme Variables usage */
-.player-bar {
-  background-color: var(--footer-bg);
-  border-top: 2px solid #282828;
-  color: #e5e5e5;
-}
-
-.hover-time {
-  background: #1c1c1c;
-  color: #e5e5e5;
-}
-
-.artist-name {
-  color: #a0a0a0;
-}
-
-.progress-bar {
-  background: #282828;
-}
-
-/* Volume Slider logic with variables */
-.volume-slider {
-  background: linear-gradient(
-    to right,
-    #e5e5e5 0%,
-    #e5e5e5 var(--range-progress, 50%),
-    #282828 var(--range-progress, 50%),
-    #282828 100%
-  );
-}
-
-.volume-slider::-webkit-slider-thumb {
-  background: #e5e5e5;
-}
-
-/* --- IMMERSIVE MODE STYLES (The Cool Factor) --- */
-
-/* Full-screen blurred background */
 .immersive-background {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   z-index: 0;
-  background-color: #121212; /* Fallback to theme BG */
+  background-color: #0c0c0c;
   overflow: hidden;
-
-  /* --- ANIMATION START: Color Cycle Base --- */
-  background: linear-gradient(135deg, #121212, #2c3e50, var(--accent), #121212);
-  background-size: 400% 400%;
-  animation: colorCycle 5s ease infinite;
-  will-change: background-position;
-  /* --- ANIMATION END --- */
-}
-
-@keyframes colorCycle {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
 .background-blur-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(100px); /* Increased blur for better integration */
-  transform: scale(1.2); /* Increased scale to cover animation edges */
-  opacity: 0.9;
-  transition: filter 0.5s ease;
-  /* Make image dark in dark mode, light in light mode */
-  :root:not([data-theme="light"]) & {
-    filter: blur(100px) brightness(40%);
-  }
-  :root[data-theme="light"] & {
-    filter: blur(100px) brightness(90%);
-  }
+  filter: blur(100px) brightness(45%);
+  transform: scale(1.2);
 }
 
-/* Dark theme specific filter for background image */
-:root:not([data-theme="light"]) .background-blur-img {
-  filter: blur(80px) brightness(40%); /* Darken in dark mode */
-}
-
-/* Light theme specific filter for background image */
 :root[data-theme="light"] .background-blur-img {
-  filter: blur(80px) brightness(90%); /* Lighten/soften in light mode */
+  filter: blur(100px) brightness(85%);
 }
 
-/* Exit Button Styling */
+.background-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+}
+
+.background-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+}
+
 .exit-immersive-mode {
   position: fixed;
   top: 20px;
@@ -639,8 +554,7 @@ onMounted(() => {
 }
 
 .exit-btn {
-  /* Glassmorphism shell, using theme colors for transparency */
-  background-color: var(--hover-bg);
+  background-color: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
   padding: 10px 15px;
   border-radius: 50px;
@@ -649,89 +563,194 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #282828;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
 .exit-btn:hover {
-  background-color: var(--accent); /* Accent on hover */
+  background-color: var(--accent);
   color: #fff;
 }
 
-/* Centered Track Info */
-.track-info-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+/* Two-column layout: artwork left, lyrics right */
+.immersive-content {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  width: 100%;
+  height: 100vh;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 64px;
+  padding-bottom: 220px; /* reserve space so lyrics never sit under the playerbar */
+  box-sizing: border-box;
+  -webkit-app-region: no-drag;
+}
+
+/* Left: album artwork */
+.artwork-column {
+  flex: 0 0 38%;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 90%;
+  justify-content: center;
+  gap: 24px;
   text-align: center;
-  z-index: 10;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Subtle text contrast */
-  -webkit-app-region: no-drag;
 }
 
-.track-artwork-img {
-  width: 350px !important;
-  height: 350px !important;
-  border-radius: 20px;
-  /* Subtle 3D lift on hover */
+.artwork-wrapper {
+  width: clamp(320px, 32vw, 480px);
+  height: clamp(320px, 32vw, 480px);
+  animation: floatArt 6s ease-in-out infinite;
+}
+
+@keyframes floatArt {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+.artwork-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 22px;
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-  -webkit-app-region: no-drag;
+    0 30px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.track-artwork-img:hover {
-  transform: scale(1.03) translateY(-5px); /* Lift and grow slightly */
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
+.track-title {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 
-.immersive-title {
-  font-size: 3.5rem;
-  font-weight: 900;
-  margin: 20px 0 5px;
-  color: #e5e5e5;
-  letter-spacing: -1px;
-}
-
-.immersive-artist {
-  font-size: 1.8rem;
+.track-artist {
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
   font-weight: 500;
   color: #a0a0a0;
-  opacity: 0.8;
-  transition:
-    color 0.2s ease,
-    opacity 0.2s ease;
+  margin: 0;
 }
 
-/* Immersive Player Bar (Controls at the bottom) */
+/* Right: live lyrics */
+.lyrics-column {
+  /* flex:1 + width:100% (not fit-content/auto) so this never shrinks to the
+     width of its longest word; explicit min/max caps the readable measure. */
+  flex: 1;
+  width: 100%;
+  min-width: 500px;
+  max-width: 850px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.lyrics-scroll-area {
+  flex: 1;
+  width: 100%;
+  min-width: 500px;
+  max-width: 850px;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 12%,
+    black 88%,
+    transparent
+  );
+}
+
+.lyrics-scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+.lyric-line {
+  text-align: left;
+  color: #a0a0a0;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  transition:
+    color 0.35s ease,
+    opacity 0.35s ease,
+    font-size 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* dist-2 / dist-3: far lines, smaller + low opacity */
+.lyric-line.dist-2,
+.lyric-line.dist-3 {
+  font-size: 24px;
+  color: #a0a0a0;
+  opacity: 0.3;
+}
+
+/* dist-1: adjacent lines */
+.lyric-line.dist-1 {
+  font-size: 32px;
+  color: #a0a0a0;
+  opacity: 0.6;
+}
+
+/* dist-0: the current, focused line */
+.lyric-line.dist-0 {
+  font-size: 64px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 1;
+  transform: scale(1.03);
+  transform-origin: left center;
+}
+
+.lyric-line.plain {
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 1;
+}
+
+.no-lyrics {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.1rem;
+}
+
+/* Bottom playback controls */
 .immersive-playerbar {
-  /* Centering the player bar horizontally */
   position: fixed;
   bottom: 0;
-  left: 50%; /* Start at 50% */
-  transform: translateX(-50%); /* Shift back by half its width */
-  width: 900px; /* Set a specific, clean width for centering */
-  max-width: 95%; /* Prevent overflow on smaller screens */
-  z-index: 9999;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  max-width: 95%;
+  z-index: 20;
   padding: 0 2rem 2rem;
-  /* No-drag for controls */
   -webkit-app-region: no-drag;
 }
 
-/* Progress Bar Container */
 .immersive-progress-container {
   padding: 0 20px;
 }
 
-/* Time Labels */
 .time-labels {
   display: flex;
   justify-content: space-between;
@@ -741,33 +760,15 @@ onMounted(() => {
   margin-top: 5px;
 }
 
-/* Progress Bar in Immersive Mode */
-.progress-bar.immersive-mode-progress {
-  position: relative;
-  bottom: auto;
-  left: auto;
-  right: auto;
-  height: 6px;
-  background: #282828;
-  border-radius: 4px;
-}
-
-.progress-fill {
-  border-radius: 4px;
-  background: var(--accent); /* Progress uses the accent color */
-}
-
-/* Immersive Controls Bar (Glassmorphism Effect) */
 .player-bar.immersive-controls-bar {
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(15px) brightness(80%); /* Increased blur */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Lighter border */
-  border-radius: 50px; /* Very rounded pill shape */
-  height: 80px; /* Slightly shorter/sleeker */
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(15px) brightness(80%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+  height: 80px;
   margin-top: 15px;
   padding: 0 40px;
-  grid-template-columns: 1fr 1.5fr 1fr; /* Adjust grid for better balance */
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
 }
 
 :root[data-theme="light"] .player-bar.immersive-controls-bar {
@@ -776,71 +777,60 @@ onMounted(() => {
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Center Controls */
-.controls {
-  gap: 20px;
+/* Tablet: shrink artwork, keep two columns */
+@media (max-width: 1024px) {
+  .immersive-content {
+    padding: 40px;
+    padding-bottom: 200px;
+    gap: 32px;
+  }
+
+  .artwork-wrapper {
+    width: clamp(240px, 30vw, 340px);
+    height: clamp(240px, 30vw, 340px);
+  }
 }
 
-.play-btn {
-  transform: scale(1.5);
-  filter: drop-shadow(0 0 5px var(--accent));
-}
+/* Mobile: stack artwork above lyrics */
+@media (max-width: 700px) {
+  .immersive-content {
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 32px 24px;
+    padding-bottom: 220px;
+    gap: 28px;
+    overflow-y: auto;
+  }
 
-.play-btn:hover {
-  transform: scale(1.6);
-  filter: drop-shadow(0 0 8px var(--accent-hover));
-}
+  .artwork-column {
+    flex: none;
+    max-width: 100%;
+  }
 
-.prev-next-btn {
-  transform: scale(1.1);
-}
+  .artwork-wrapper {
+    width: min(60vw, 280px);
+    height: min(60vw, 280px);
+  }
 
-/* Icon Button Enhancements (Theme-Aware) */
-.icon-btn .playbar-icon-class {
-  filter: invert(0%); /* Resetting default filter */
-  opacity: 0.8;
-  transition: opacity 0.2s;
-}
+  .lyrics-column {
+    height: auto;
+    min-width: 0; /* 500px floor doesn't fit on phone-width viewports */
+    max-width: 100%;
+    justify-content: center;
+  }
 
-:root:not([data-theme="light"]) .icon-btn .playbar-icon-class {
-  filter: invert(100%) brightness(200%); /* White icons in dark mode */
-}
-:root[data-theme="light"] .icon-btn .playbar-icon-class {
-  filter: invert(0%) brightness(0%); /* Black icons in light mode */
-}
+  .lyrics-scroll-area {
+    min-width: 0;
+    max-width: 100%;
+    text-align: center;
+  }
 
-.icon-btn:hover .playbar-icon-class {
-  opacity: 1;
-}
+  .lyric-line {
+    text-align: center;
+  }
 
-/* Active/Special Icons */
-.toggle-shuffle.active img,
-.icon-btn img.is-liked {
-  filter: none; /* Disable invert filter */
-}
-
-.toggle-shuffle.active img {
-  filter: drop-shadow(0 0 4px var(--accent-hover));
-  opacity: 1;
-}
-.icon-btn img.is-liked {
-  fill: var(--accent); /* Heart solid color */
-  filter: drop-shadow(0 0 4px var(--accent));
-}
-
-/* Hide the old song info, it's now in the center */
-.song-info {
-  display: none;
-}
-
-/* 3D Parallax Wrapper */
-.parallax-wrapper {
-  perspective: 1200px;
-}
-
-.parallax-img {
-  transform-style: preserve-3d;
-  transition: transform 0.15s ease;
-  will-change: transform;
+  .lyric-line.dist-0 {
+    transform-origin: center;
+  }
 }
 </style>

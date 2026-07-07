@@ -21,14 +21,12 @@ export function registerWindowHandlers(mainWindow) {
   ipcMain.handle("win:set-immersive-mode", () => {
     if (mainWindow) {
       mainWindow.setFullScreen(true)
-      mainWindow.setResizeable(false)
     }
   })
 
   ipcMain.handle("win:reset-immersive-mode", () => {
     if (mainWindow) {
       mainWindow.setFullScreen(false)
-      mainWindow.setResizeable(true)
     }
   })
 }

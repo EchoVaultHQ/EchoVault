@@ -166,6 +166,25 @@
                 {{ t("settings.audio.description") }}
               </p>
 
+              <div class="setting-group">
+                <div class="setting-label">
+                  <i class="fa-solid fa-cloud"></i>
+                  <div>
+                    <h3>{{ t("settings.audio.onlineLyrics.title") }}</h3>
+                    <p>{{ t("settings.audio.onlineLyrics.description") }}</p>
+                  </div>
+                </div>
+                <button
+                  class="toggle-switch"
+                  :class="{ active: fetchLyricsOnline }"
+                  role="switch"
+                  :aria-checked="fetchLyricsOnline"
+                  @click="toggleFetchLyricsOnline"
+                >
+                  <span class="toggle-knob"></span>
+                </button>
+              </div>
+
               <div class="setting-group disabled">
                 <div class="setting-label">
                   <i class="fa-solid fa-sliders"></i>
@@ -299,6 +318,15 @@ const isDarkMode = computed(() => themeStore.theme === "dark")
 
 // locale
 const currentLocale = ref(localStorage.getItem("locale") || "en")
+
+// online lyrics lookup
+const fetchLyricsOnline = ref(
+  localStorage.getItem("fetchLyricsOnline") !== "false"
+)
+const toggleFetchLyricsOnline = () => {
+  fetchLyricsOnline.value = !fetchLyricsOnline.value
+  localStorage.setItem("fetchLyricsOnline", String(fetchLyricsOnline.value))
+}
 
 const tabs = [
   {
@@ -561,6 +589,37 @@ onMounted(() => {
 
 .theme-option i {
   font-size: 1.25rem;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: var(--border-color);
+  cursor: pointer;
+  position: relative;
+  padding: 3px;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.toggle-switch.active {
+  background: var(--accent);
+}
+
+.toggle-knob {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch.active .toggle-knob {
+  transform: translateX(24px);
 }
 
 /* Color Grid */
