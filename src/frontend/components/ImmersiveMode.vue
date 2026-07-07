@@ -684,16 +684,13 @@ const closeImmersiveMode = () => emit("close-immersive-mode")
 }
 
 .lyric-line {
-  text-align: left;
-  color: #a0a0a0;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: -0.02em;
-  transition:
-    color 0.35s ease,
-    opacity 0.35s ease,
-    font-size 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+        transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 450ms ease,
+        color 450ms ease;
+
+    will-change: transform, opacity;
+    transform-origin: left center;
 }
 
 /* dist-2 / dist-3: far lines, smaller + low opacity */
