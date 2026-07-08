@@ -1,7 +1,7 @@
 import { ipcMain } from "electron"
 import fs from "fs"
 import path from "path"
-import { parseFile } from "music-metadata"
+import { parseAudioFile } from "../utils/audioMeta.js"
 import { extractEmbeddedLyrics } from "../utils/embeddedLyrics.js"
 import { parseLrc, withEndTimes } from "../utils/lrcParser.js"
 import { fetchLyricsFromLrclib } from "../utils/lrclibClient.js"
@@ -49,7 +49,7 @@ export function registerTrackHandlers(mainWindow, db) {
       }
       log.info("lyrics :: .lrc file :: miss", filePath)
 
-      const metadata = await parseFile(filePath)
+      const metadata = await parseAudioFile(filePath)
       const embedded = extractEmbeddedLyrics(metadata)
       if (embedded) {
         log.info("lyrics :: embedded tags :: hit", filePath)

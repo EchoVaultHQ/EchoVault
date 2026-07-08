@@ -66,7 +66,7 @@ export function watchFolders(db) {
           meta.cover || null
         )
       } catch (err) {
-        console.warn("Metadata extraction failed:", filePath, err.message)
+        log.warn("watchFolders :: Metadata extraction failed:", filePath, "::", err.message)
       }
     })
     .on("unlink", (filePath) => {

@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { app } from "electron"
-import { parseFile } from "music-metadata"
+import { parseAudioFile } from "../utils/audioMeta.js"
 import {
   INSERT_FOLDER_IF_NOT_EXISTS,
   GET_FOLDER_ID_BY_PATH,
@@ -21,7 +21,7 @@ import log from "../../logger.js"
 export async function extractMetadata(filePath) {
   try {
     // log.info("extractMetadata :: Start")
-    const metadata = await parseFile(filePath)
+    const metadata = await parseAudioFile(filePath)
     // log.info("extractMetadata :: metadata parsed")
     const { common, format } = metadata
 
@@ -43,7 +43,7 @@ export async function extractMetadata(filePath) {
       cover: coverPath,
     }
   } catch (err) {
-    log.debug("Metadata error:", err.message)
+    log.warn("extractMetadata :: failed to parse", filePath, "::", err.message)
     return null
   }
 }
@@ -116,7 +116,7 @@ async function readTracksFromFoldersAndSetInDB(db, folderPath) {
     if (exists) continue
 
     try {
-      const metadata = await parseFile(filePath)
+      const metadata = await parseAudioFile(filePath)
       const { title, artist, album, picture } = metadata.common
       const duration = metadata.format.duration || 0
       const artistName = artist || "Unknown Artist"
@@ -154,9 +154,10 @@ async function readTracksFromFoldersAndSetInDB(db, folderPath) {
         coverData
       )
     } catch (err) {
-      console.warn(
+      log.warn(
         "readTracksFromFoldersAndSetInDB :: Metadata read failed for:",
         filePath,
+        "::",
         err.message
       )
     }
