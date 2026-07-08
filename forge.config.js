@@ -12,7 +12,10 @@ module.exports = {
     },
     // ignore node_modules and use it on runtime
     // dont modify this
-    ignore: [/node_modules\/(?!(better-sqlite3|bindings|file-uri-to-path)\/)/],
+    // onnx/ is dev-only tooling + the committed model + local build binaries — the
+    // AI enhancer downloads its own binary/model into userData/enhancer at runtime
+    // (see downloader.js), so none of onnx/ should ship inside the packaged app.
+    ignore: [/node_modules\/(?!(better-sqlite3|bindings|file-uri-to-path)\/)/, /(^|[\\/])onnx[\\/]/],
   },
   rebuildConfig: {
     force: true,
