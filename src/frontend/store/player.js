@@ -82,6 +82,17 @@ eqFilters.forEach((filter, i) => {
   filter.gain.value = initialEqEnabled ? initialEqBands[i] : 0
 })
 
+// Output device selection, via the Audio Output Devices API
+// (AudioContext.setSinkId) — a direct Chromium/Web Audio feature, no manual
+// MediaStreamAudioDestinationNode/hidden-<audio> routing needed. "" means
+// the system default device.
+const initialOutputDeviceId = localStorage.getItem("outputDeviceId") || ""
+if (initialOutputDeviceId && typeof audioCtx.setSinkId === "function") {
+  audioCtx.setSinkId(initialOutputDeviceId).catch((err) => {
+    console.warn("Saved output device unavailable, using default:", err)
+  })
+}
+
 // Live-adaptive loudness normalization (NOT true LUFS/EBU R128, and not a
 // continuous compressor/leveler either): the analyser is sampled for a short
 // window at the start of each track, one RMS-based gain is computed from
@@ -157,6 +168,8 @@ export const usePlayerStore = defineStore("player", {
     eqPreset: initialEqPreset, // preset name, or "Custom"
     eqBands: initialEqBands, // 10 dB values, -12..12, aligned to EQ_BANDS
     normalizationEnabled: initialNormalizationEnabled,
+    outputDeviceId: initialOutputDeviceId, // '' = system default
+    outputDevices: [], // populated at runtime via refreshOutputDevices()
   }),
   getters: {
     hasNext: (state) => state.currentIndex < state.queue.length - 1,
@@ -418,6 +431,40 @@ export const usePlayerStore = defineStore("player", {
         resetNormalizationMeasurement()
       } else {
         normalizationGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.01)
+      }
+    },
+
+    async refreshOutputDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        this.outputDevices = devices.filter((d) => d.kind === "audiooutput")
+      } catch (err) {
+        console.error("Failed to enumerate output devices:", err)
+      }
+    },
+
+    // Device labels are hidden until the user grants a media permission at
+    // least once (a browser privacy measure) - request+immediately drop a
+    // mic stream purely to unlock labels, then re-enumerate.
+    async requestDeviceLabelsPermission() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((track) => track.stop())
+        await this.refreshOutputDevices()
+      } catch (err) {
+        console.error("Microphone permission denied, device names unavailable:", err)
+      }
+    },
+
+    async setOutputDevice(deviceId) {
+      this.outputDeviceId = deviceId
+      localStorage.setItem("outputDeviceId", deviceId)
+      if (typeof audioCtx.setSinkId !== "function") return
+      try {
+        await audioCtx.setSinkId(deviceId)
+      } catch (err) {
+        console.error("Failed to set output device:", err)
+        window.api.showToast?.("Couldn't switch to that output device.", "error")
       }
     },
 

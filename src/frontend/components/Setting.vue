@@ -342,6 +342,70 @@
               </div>
             </div>
 
+            <!-- Devices Tab -->
+            <div v-if="activeTab === 'devices'" class="tab-content">
+              <h2 class="section-title">{{ t("settings.devices.title") }}</h2>
+              <p class="section-description">
+                {{ t("settings.devices.description") }}
+              </p>
+
+              <div class="setting-group">
+                <div class="setting-label">
+                  <i class="fa-solid fa-headphones"></i>
+                  <div>
+                    <h3>{{ t("settings.devices.output.title") }}</h3>
+                    <p>{{ t("settings.devices.output.description") }}</p>
+                  </div>
+                </div>
+
+                <p v-if="!hasDeviceLabels" class="section-description">
+                  {{ t("settings.devices.output.permissionHint") }}
+                  <button
+                    class="theme-option"
+                    @click="player.requestDeviceLabelsPermission()"
+                  >
+                    {{ t("settings.devices.output.grantPermission") }}
+                  </button>
+                </p>
+
+                <div class="language-selector">
+                  <button
+                    class="language-option"
+                    :class="{ active: player.outputDeviceId === '' }"
+                    @click="player.setOutputDevice('')"
+                  >
+                    <div>
+                      <div class="lang-name">
+                        {{ t("settings.devices.output.systemDefault") }}
+                      </div>
+                    </div>
+                    <i
+                      v-if="player.outputDeviceId === ''"
+                      class="fa-solid fa-check"
+                    ></i>
+                  </button>
+
+                  <button
+                    v-for="device in player.outputDevices"
+                    :key="device.deviceId"
+                    class="language-option"
+                    :class="{ active: player.outputDeviceId === device.deviceId }"
+                    @click="player.setOutputDevice(device.deviceId)"
+                  >
+                    <div>
+                      <div class="lang-name">
+                        {{ device.label || t("settings.devices.output.unnamedDevice") }}
+                      </div>
+                    </div>
+                    <i
+                      v-if="player.outputDeviceId === device.deviceId"
+                      class="fa-solid fa-check"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Shortcuts Tab -->
             <div v-if="activeTab === 'shortcuts'" class="tab-content">
               <h2 class="section-title">{{ t("settings.shortcuts.title") }}</h2>
@@ -461,6 +525,14 @@ watch(
   }
 )
 
+watch(activeTab, (tab) => {
+  if (tab === "devices") player.refreshOutputDevices()
+})
+
+const hasDeviceLabels = computed(() =>
+  player.outputDevices.some((d) => d.label)
+)
+
 // use store for theme
 const isDarkMode = computed(() => themeStore.theme === "dark")
 
@@ -488,6 +560,11 @@ const tabs = [
     icon: "fa-solid fa-language",
   },
   { id: "audio", labelKey: "settings.tabs.audio", icon: "fa-solid fa-sliders" },
+  {
+    id: "devices",
+    labelKey: "settings.tabs.devices",
+    icon: "fa-solid fa-headphones",
+  },
   {
     id: "shortcuts",
     labelKey: "settings.tabs.shortcuts",

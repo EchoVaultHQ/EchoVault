@@ -111,6 +111,7 @@
       "appearance": "外観",
       "language": "言語・地域",
       "audio": "オーディオ",
+      "devices": "デバイス",
       "shortcuts": "ショートカット",
       "about": "情報"
     },
@@ -196,6 +197,18 @@
         "title": "正規化",
         "description": "トラック間の音量を正規化します",
         "enable": "音量を正規化する"
+      }
+    },
+    "devices": {
+      "title": "デバイス",
+      "description": "EchoVaultが音声を再生するオーディオ出力デバイスを選択します",
+      "output": {
+        "title": "出力デバイス",
+        "description": "音声を再生するスピーカーやヘッドホンを選択します",
+        "permissionHint": "デバイス名を表示するには権限を許可してください。",
+        "grantPermission": "許可する",
+        "systemDefault": "システムのデフォルト",
+        "unnamedDevice": "名前のないデバイス"
       }
     },
     "shortcuts": {

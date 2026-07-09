@@ -109,6 +109,7 @@
       "appearance": "Appearance",
       "language": "Language & Region",
       "audio": "Audio",
+      "devices": "Devices",
       "shortcuts": "Shortcuts",
       "about": "About"
     },
@@ -194,6 +195,18 @@
         "title": "Normalization",
         "description": "Normalize volume levels across tracks",
         "enable": "Normalize volume"
+      }
+    },
+    "devices": {
+      "title": "Devices",
+      "description": "Choose which audio output device EchoVault plays through",
+      "output": {
+        "title": "Output Device",
+        "description": "Select the speaker or headphones to play audio through",
+        "permissionHint": "Grant permission to see device names.",
+        "grantPermission": "Allow",
+        "systemDefault": "System Default",
+        "unnamedDevice": "Unnamed device"
       }
     },
     "shortcuts": {
