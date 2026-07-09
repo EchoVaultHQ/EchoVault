@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron"
 import log from "electron-log/renderer"
 
 contextBridge.exposeInMainWorld("api", {
+  platform: process.platform,
+
   // library
   addFolder: () => ipcRenderer.invoke("library:add-folder"),
   getFolders: () => ipcRenderer.invoke("library:get-folders"),

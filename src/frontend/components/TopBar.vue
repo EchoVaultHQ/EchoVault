@@ -1,18 +1,21 @@
 <template>
   <header class="top-bar">
-    <!-- Window controls row - sits at top -->
+    <!-- Window controls row - sits at top. On macOS this stays empty so its
+         height reserves space for the native traffic lights. -->
     <div class="window-controls">
-      <button class="win-btn" @click="winMinimize">
-        <img :src="Minimize" :style="iconFilter" />
-      </button>
+      <template v-if="!isMac">
+        <button class="win-btn" @click="winMinimize">
+          <img :src="Minimize" :style="iconFilter" />
+        </button>
 
-      <button class="win-btn" @click="winMaximize">
-        <img :src="Maximize" :style="iconFilter" />
-      </button>
+        <button class="win-btn" @click="winMaximize">
+          <img :src="Maximize" :style="iconFilter" />
+        </button>
 
-      <button class="win-btn close-btn" @click="winClose">
-        <img :src="X" :style="iconFilter" />
-      </button>
+        <button class="win-btn close-btn" @click="winClose">
+          <img :src="X" :style="iconFilter" />
+        </button>
+      </template>
     </div>
 
     <!-- Main content row - search and actions below controls -->
@@ -81,6 +84,8 @@ import {
 } from "../assets/icons/icons.js"
 
 const themeStore = useThemeStore()
+
+const isMac = window.api.platform === "darwin"
 
 const emit = defineEmits(["toggle-setting-menu"])
 const showDropdown = ref(false)

@@ -33,6 +33,7 @@ protocol.registerSchemesAsPrivileged([
 
 function createWindow() {
   const isDev = !app.isPackaged
+  const isMac = process.platform === "darwin"
 
   mainWindow = new BrowserWindow({
     show: false,
@@ -50,8 +51,11 @@ function createWindow() {
     width: 1280,
     minWidth: 350,
     minHeight: 634,
-    titleBarStyle: "hidden",
-    frame: false,
+    // macOS keeps the native traffic lights (frame:false hides them);
+    // Windows/Linux keep the fully custom frameless title bar.
+    ...(isMac
+      ? { titleBarStyle: "hidden", trafficLightPosition: { x: 12, y: 10 } }
+      : { titleBarStyle: "hidden", frame: false }),
   })
 
   mainWindow.once("ready-to-show", () => {
