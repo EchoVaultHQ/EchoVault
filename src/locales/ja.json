@@ -93,6 +93,7 @@
   },
 
   "labels": {
+    "equalizer": "イコライザ",
     "perTrack": "各トラック",
     "uniqueAlbums": "ユニークアルバム数",
     "allTime": "累計",
@@ -110,6 +111,7 @@
       "appearance": "外観",
       "language": "言語・地域",
       "audio": "オーディオ",
+      "devices": "デバイス",
       "shortcuts": "ショートカット",
       "about": "情報"
     },
@@ -172,11 +174,41 @@
       },
       "equalizer": {
         "title": "イコライザ",
-        "description": "音域を調整して好みの音にします"
+        "description": "音域を調整して好みの音にします",
+        "enable": "イコライザを有効にする",
+        "preset": "プリセット",
+        "presets": {
+          "Flat": "フラット",
+          "Bass Booster": "ベースブースト",
+          "Bass Reducer": "ベースリダクション",
+          "Treble Booster": "トレブルブースト",
+          "Treble Reducer": "トレブルリダクション",
+          "Vocal Booster": "ボーカルブースト",
+          "Rock": "ロック",
+          "Pop": "ポップ",
+          "Jazz": "ジャズ",
+          "Classical": "クラシック",
+          "Electronic": "エレクトロニック",
+          "Acoustic": "アコースティック",
+          "Custom": "カスタム"
+        }
       },
       "normalization": {
         "title": "正規化",
-        "description": "トラック間の音量を正規化します"
+        "description": "トラック間の音量を正規化します",
+        "enable": "音量を正規化する"
+      }
+    },
+    "devices": {
+      "title": "デバイス",
+      "description": "EchoVaultが音声を再生するオーディオ出力デバイスを選択します",
+      "output": {
+        "title": "出力デバイス",
+        "description": "音声を再生するスピーカーやヘッドホンを選択します",
+        "permissionHint": "デバイス名を表示するには権限を許可してください。",
+        "grantPermission": "許可する",
+        "systemDefault": "システムのデフォルト",
+        "unnamedDevice": "名前のないデバイス"
       }
     },
     "shortcuts": {
@@ -201,5 +233,17 @@
 
   "enhance": {
     "enhanceToFlac": "FLAC に高音質化 (AI)"
+  },
+
+  "miniPlayer": {
+    "toggle": "ミニプレーヤーを切り替え",
+    "close": "閉じる",
+    "previous": "前へ",
+    "playPause": "再生・一時停止",
+    "next": "次へ",
+    "repeat": "リピート",
+    "shuffleOn": "シャッフル: オン",
+    "shuffleOff": "シャッフル: オフ",
+    "trackCount": "{total} 曲中 {current} 曲目"
   }
 }

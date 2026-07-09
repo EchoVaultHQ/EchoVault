@@ -75,6 +75,17 @@
     <div class="right-section">
       <div class="track-utils">
         <button
+          @click="toggleMiniPlayerMode"
+          class="icon-btn"
+          :title="t('miniPlayer.toggle')"
+        >
+          <img
+            :src="isMiniPlayerActive ? Fullscreen : FullscreenExit"
+            class="playbar-icon-class"
+            :alt="t('miniPlayer.toggle')"
+          />
+        </button>
+        <button
           @click="togglePlayListQueueView"
           class="icon-btn"
           :title="`Show Queue`"
@@ -91,6 +102,13 @@
             class="playbar-icon-class"
             alt="DesktopLyrics"
           />
+        </button>
+        <button
+          @click="openEqualizer"
+          class="icon-btn"
+          :title="t('labels.equalizer')"
+        >
+          <img :src="Settings" class="playbar-icon-class" alt="Equalizer" />
         </button>
         <button @click="toggleLikedSong" class="icon-btn" :title="`Like Song`">
           <img
@@ -141,6 +159,7 @@
           v-model="volume"
           @input="onVolumeChange"
           class="volume-slider"
+          :style="{ '--range-progress': volume + '%' }"
           :title="`Volume: ${volume}%`"
         />
       </div>
@@ -149,7 +168,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from "vue"
+import { computed } from "vue"
 import { usePlayerStore } from "../store/player.js"
 import { useRouter } from "vue-router"
 import {
@@ -166,6 +185,9 @@ import {
   RepeatOne,
   Playlist,
   DesktopLyrics,
+  Settings,
+  Fullscreen,
+  FullscreenExit,
 } from "../assets/icons/icons"
 
 import {
@@ -177,9 +199,18 @@ import {
   getVolumeIcon,
 } from "../utils/playerUtils.js"
 import { useI18n } from "vue-i18n"
+import {
+  isMiniPlayerActive,
+  enterMiniPlayer,
+  exitMiniPlayer,
+} from "../utils/miniPlayerState.js"
 
 const { t } = useI18n()
-const emit = defineEmits(["toggle-queue", "toggle-immersive-mode"])
+const emit = defineEmits([
+  "toggle-queue",
+  "toggle-immersive-mode",
+  "open-equalizer",
+])
 
 const props = defineProps({
   isInImmersiveMode: {
@@ -209,13 +240,6 @@ const currentVolumeIcon = computed(() =>
   getVolumeIcon(volume.value, { Volume, VolumeMute })
 )
 
-watch(volume, (newVal) => {
-  const slider = document.querySelector(".volume-slider")
-  if (slider) {
-    slider.style.setProperty("--range-progress", `${newVal}%`)
-  }
-})
-
 const togglePlayListQueueView = () => {
   emit("toggle-queue")
 }
@@ -223,6 +247,18 @@ const togglePlayListQueueView = () => {
 const toggleImmersiveMode = () => {
   console.log("Toggling immersive mode")
   emit("toggle-immersive-mode")
+}
+
+const openEqualizer = () => {
+  emit("open-equalizer")
+}
+
+const toggleMiniPlayerMode = () => {
+  if (isMiniPlayerActive.value) {
+    exitMiniPlayer()
+  } else {
+    enterMiniPlayer()
+  }
 }
 
 const openArtistFromPlayer = () => {

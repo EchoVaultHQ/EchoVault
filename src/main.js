@@ -1,6 +1,7 @@
 import { app, BrowserWindow, protocol } from "electron"
 import path from "node:path"
 import fs from "node:fs"
+import { Readable } from "node:stream"
 import started from "electron-squirrel-startup"
 import log from "electron-log/main"
 import { initDB } from "./backend/db/index.js"
@@ -26,6 +27,17 @@ protocol.registerSchemesAsPrivileged([
       secure: true,
       supportFetchAPI: true,
       corsEnabled: true,
+      bypassCSP: false,
+    },
+  },
+  {
+    scheme: "echovault-audio",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
       bypassCSP: false,
     },
   },
@@ -128,6 +140,83 @@ app.whenReady().then(() => {
       log.error("main :: [echovault] Protocol error:", err)
       callback({ error: -2 })
     }
+  })
+
+  // Streams local audio files straight to <audio> for playback, so the
+  // renderer never has to read/decode a whole track into memory up front.
+  // Uses a fixed "local" host segment (echovault-audio://local/<encoded>,
+  // see toStreamUrl in player.js) rather than an empty authority - protocol
+  // .handle builds a real WHATWG URL/Request internally, which is stricter
+  // about empty hosts on "standard" schemes than the legacy
+  // registerBufferProtocol API the echovault:// cover-art protocol above
+  // uses, so this avoids relying on that leniency.
+  const AUDIO_MIME_TYPES = {
+    ".flac": "audio/flac",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".m4a": "audio/mp4",
+    ".aac": "audio/aac",
+    ".ogg": "audio/ogg",
+  }
+
+  protocol.handle("echovault-audio", (request) => {
+    const prefix = "echovault-audio://local/"
+    const encoded = request.url.startsWith(prefix)
+      ? request.url.slice(prefix.length)
+      : request.url.slice("echovault-audio://".length).replace(/^\/?local\//, "")
+    const filePath = decodeURIComponent(encoded)
+
+    if (!fs.existsSync(filePath)) {
+      log.error(`main :: [echovault-audio] File not found: ${filePath}`)
+      return new Response("Not found", { status: 404 })
+    }
+
+    const fileSize = fs.statSync(filePath).size
+    const contentType =
+      AUDIO_MIME_TYPES[path.extname(filePath).toLowerCase()] ||
+      "application/octet-stream"
+
+    // Seeking depends on the browser sending a byte-range Range request and
+    // getting back a real 206 Partial Content response - without explicit
+    // handling here, every seek would just re-fetch (and replay) the whole
+    // file from byte 0.
+    const headers = {
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+      "Access-Control-Allow-Origin": "*", // <audio> uses crossOrigin="anonymous" so its samples are AnalyserNode-readable
+    }
+
+    const rangeHeader = request.headers.get("range")
+    if (!rangeHeader) {
+      const stream = Readable.toWeb(fs.createReadStream(filePath))
+      return new Response(stream, {
+        status: 200,
+        headers: { ...headers, "Content-Length": String(fileSize) },
+      })
+    }
+
+    const match = rangeHeader.match(/bytes=(\d*)-(\d*)/)
+    let start = match?.[1] ? parseInt(match[1], 10) : 0
+    let end = match?.[2] ? parseInt(match[2], 10) : fileSize - 1
+    if (isNaN(start) || start < 0) start = 0
+    if (isNaN(end) || end >= fileSize) end = fileSize - 1
+
+    if (start > end) {
+      return new Response(null, {
+        status: 416,
+        headers: { ...headers, "Content-Range": `bytes */${fileSize}` },
+      })
+    }
+
+    const stream = Readable.toWeb(fs.createReadStream(filePath, { start, end }))
+    return new Response(stream, {
+      status: 206,
+      headers: {
+        ...headers,
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Content-Length": String(end - start + 1),
+      },
+    })
   })
 
   const db = initDB()

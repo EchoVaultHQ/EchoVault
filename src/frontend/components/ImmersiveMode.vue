@@ -176,6 +176,7 @@
             v-model="volume"
             @input="onVolumeChange"
             class="volume-slider"
+            :style="{ '--range-progress': volume + '%' }"
             :title="`Volume: ${volume}%`"
           />
         </div>
@@ -297,13 +298,6 @@ const { toggleLikedSong } = useTrackLike(player)
 const currentVolumeIcon = computed(() =>
   getVolumeIcon(volume.value, { Volume, VolumeMute })
 )
-
-watch(volume, (newVal) => {
-  const slider = document.querySelector(".volume-slider")
-  if (slider) {
-    slider.style.setProperty("--range-progress", `${newVal}%`)
-  }
-})
 
 const closeImmersiveMode = () => emit("close-immersive-mode")
 </script>

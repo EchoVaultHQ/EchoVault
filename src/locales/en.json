@@ -89,6 +89,7 @@
   },
 
   "labels": {
+    "equalizer": "Equalizer",
     "perTrack": "per track",
     "uniqueAlbums": "unique albums",
     "allTime": "all time",
@@ -108,6 +109,7 @@
       "appearance": "Appearance",
       "language": "Language & Region",
       "audio": "Audio",
+      "devices": "Devices",
       "shortcuts": "Shortcuts",
       "about": "About"
     },
@@ -170,11 +172,41 @@
       },
       "equalizer": {
         "title": "Equalizer",
-        "description": "Adjust audio frequencies to your preference"
+        "description": "Adjust audio frequencies to your preference",
+        "enable": "Enable equalizer",
+        "preset": "Preset",
+        "presets": {
+          "Flat": "Flat",
+          "Bass Booster": "Bass Booster",
+          "Bass Reducer": "Bass Reducer",
+          "Treble Booster": "Treble Booster",
+          "Treble Reducer": "Treble Reducer",
+          "Vocal Booster": "Vocal Booster",
+          "Rock": "Rock",
+          "Pop": "Pop",
+          "Jazz": "Jazz",
+          "Classical": "Classical",
+          "Electronic": "Electronic",
+          "Acoustic": "Acoustic",
+          "Custom": "Custom"
+        }
       },
       "normalization": {
         "title": "Normalization",
-        "description": "Normalize volume levels across tracks"
+        "description": "Normalize volume levels across tracks",
+        "enable": "Normalize volume"
+      }
+    },
+    "devices": {
+      "title": "Devices",
+      "description": "Choose which audio output device EchoVault plays through",
+      "output": {
+        "title": "Output Device",
+        "description": "Select the speaker or headphones to play audio through",
+        "permissionHint": "Grant permission to see device names.",
+        "grantPermission": "Allow",
+        "systemDefault": "System Default",
+        "unnamedDevice": "Unnamed device"
       }
     },
     "shortcuts": {
@@ -217,5 +249,17 @@
 
   "enhance": {
     "enhanceToFlac": "Enhance to FLAC (AI)"
+  },
+
+  "miniPlayer": {
+    "toggle": "Toggle Mini Player",
+    "close": "Close",
+    "previous": "Previous",
+    "playPause": "Play/Pause",
+    "next": "Next",
+    "repeat": "Repeat",
+    "shuffleOn": "Shuffle: On",
+    "shuffleOff": "Shuffle: Off",
+    "trackCount": "{current} of {total}"
   }
 }

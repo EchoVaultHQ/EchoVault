@@ -25,8 +25,6 @@ contextBridge.exposeInMainWorld("api", {
 
   // player
   playTrack: (track) => ipcRenderer.invoke("player:play", track),
-  streamChunk: (trackPath, offset, size) =>
-    ipcRenderer.invoke("player:streamChunk", trackPath, offset, size),
   getFileSize: (trackPath) =>
     ipcRenderer.invoke("player:getFileSize", trackPath),
 
@@ -65,6 +63,7 @@ contextBridge.exposeInMainWorld("api", {
   getArtistByName: (name) => ipcRenderer.invoke("get-artist-by-name", name),
   restoreWindowSize: () => ipcRenderer.invoke("restore-window-size"),
   enableMiniPlayer: () => ipcRenderer.invoke("enable-mini-player"),
+  checkMiniMode: () => ipcRenderer.invoke("check-mini-mode"),
 
   // Search
   searchTracks: (payload) => ipcRenderer.invoke("search:tracks", payload),

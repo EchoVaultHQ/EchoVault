@@ -1,4 +1,4 @@
-import { ref, computed } from "vue"
+import { ref, computed, watch } from "vue"
 
 export function formatTime(seconds) {
   if (!seconds || isNaN(seconds)) return "0:00"
@@ -8,8 +8,17 @@ export function formatTime(seconds) {
 }
 
 // Volume Control
-export function useVolumeControl(player, initialVolume = 50) {
-  const volume = ref(initialVolume)
+export function useVolumeControl(player) {
+  // Derived from the shared store, not a per-component default, so normal
+  // and immersive mode (separate calls to this composable) stay in sync.
+  const volume = ref(player.volume * 100)
+
+  watch(
+    () => player.volume,
+    (v) => {
+      volume.value = v * 100
+    }
+  )
 
   const onVolumeChange = () => {
     player.setVolume(volume.value / 100)

@@ -5,7 +5,11 @@
     <div class="main-layout" :class="{ 'queue-open': showQueue }">
       <SideNav :collapsed="showQueue" v-if="showMainViews" />
       <main class="content-area">
-        <Setting :showSettingMenu="showSettingMenu" @close="closeSettingMenu" />
+        <Setting
+          :showSettingMenu="showSettingMenu"
+          :initialTab="settingsInitialTab"
+          @close="closeSettingMenu"
+        />
         <router-view v-if="showMainViews" />
       </main>
       <QueueSidebar :showQueue="showQueue" @close="closeQueue" />
@@ -14,6 +18,7 @@
     <PlayerBar
       @toggle-queue="toggleQueue"
       @toggle-immersive-mode="toggleImmersiveMode"
+      @open-equalizer="openEqualizer"
       v-if="showMainViews && !isImmersiveMode"
     />
     <ImmersiveMode
@@ -38,6 +43,7 @@ import ImmersiveMode from "./components/ImmersiveMode.vue"
 
 const showQueue = ref(false)
 const showSettingMenu = ref(false)
+const settingsInitialTab = ref("appearance")
 const showMainViews = computed(() => !showSettingMenu.value)
 const isImmersiveMode = ref(false)
 
@@ -47,6 +53,11 @@ const toggleQueue = () => {
 
 const toggleSettingMenu = () => {
   showSettingMenu.value = !showSettingMenu.value
+}
+
+const openEqualizer = () => {
+  settingsInitialTab.value = "audio"
+  showSettingMenu.value = true
 }
 
 const closeSettingMenu = () => {

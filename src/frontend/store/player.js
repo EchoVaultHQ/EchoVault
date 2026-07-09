@@ -1,11 +1,145 @@
 import { defineStore } from "pinia"
+import { EQ_BANDS, EQ_PRESETS } from "../utils/eqPresets.js"
 
-let currentSource = null
-let currentAudioBuffer = null // Track the buffer
-let _playStartTime = 0
-const audioCtx = new AudioContext({ sampleRate: 48000 })
+// No forced sampleRate: matches the output device's native rate instead of
+// always resampling to a fixed 48kHz regardless of the device or source file.
+const audioCtx = new AudioContext()
 const gainNode = audioCtx.createGain() // master gain for volume
 gainNode.connect(audioCtx.destination)
+
+// Pre-gain stage for loudness normalization, applied before EQ so the tone
+// curve never skews the loudness estimate. Unity (1.0) when disabled.
+const normalizationGain = audioCtx.createGain()
+
+// Persistent 10-band graphic EQ. Created once and reused across tracks like
+// gainNode above (AudioNodes other than sources aren't single-use).
+const eqFilters = EQ_BANDS.map((freq) => {
+  const filter = audioCtx.createBiquadFilter()
+  filter.type = "peaking"
+  filter.frequency.value = freq
+  filter.Q.value = 1.4
+  filter.gain.value = 0
+  return filter
+})
+
+// Chain: audioEl -> normalizationGain -> eq[0] -> ... -> eq[9] -> gainNode -> destination
+eqFilters.reduce((prev, node) => {
+  prev.connect(node)
+  return node
+}, normalizationGain)
+eqFilters[eqFilters.length - 1].connect(gainNode)
+
+// Streamed playback: a single persistent <audio> element (never recreated,
+// same pattern as gainNode/eqFilters above) whose src is swapped per track.
+// Replaces the old whole-file IPC-read + decodeAudioData() approach, so a
+// track no longer needs to be fully downloaded/decoded into memory before
+// playback can start. createMediaElementSource can only be called once per
+// element, which is exactly why it's created once here rather than per-track.
+const audioEl = new Audio()
+audioEl.crossOrigin = "anonymous" // pairs with the corsEnabled custom protocol, so AnalyserNode reads below aren't blocked as "tainted"
+const mediaSource = audioCtx.createMediaElementSource(audioEl)
+mediaSource.connect(normalizationGain)
+
+// Parallel analysis tap for live loudness normalization — doesn't affect the
+// audible signal chain above, just reads from it.
+const normalizerAnalyser = audioCtx.createAnalyser()
+normalizerAnalyser.fftSize = 2048
+mediaSource.connect(normalizerAnalyser)
+
+function toStreamUrl(filePath) {
+  // Fixed "local" host + encoded path in the URL's path component. This
+  // scheme is registered "standard", so a bare "echovault-audio://<encoded>"
+  // would put the encoded path where the HOST goes and get mangled by host
+  // canonicalization - a real, non-empty host segment sidesteps that
+  // entirely (and empty-host handling varies between the legacy
+  // registerBufferProtocol API and the modern protocol.handle API).
+  return `echovault-audio://local/${encodeURIComponent(filePath)}`
+}
+
+function readPersistedBands() {
+  try {
+    const raw = localStorage.getItem("eqBands")
+    if (raw === null) return null
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length === EQ_BANDS.length) {
+      return parsed
+    }
+    return null
+  } catch (e) {
+    console.warn("Failed to parse persisted eqBands, using defaults:", e)
+    return null
+  }
+}
+
+const initialEqEnabled = localStorage.getItem("eqEnabled") !== "false" // default true
+const initialEqPreset = localStorage.getItem("eqPreset") || "Flat"
+const initialEqBands = readPersistedBands() || EQ_PRESETS.Flat.slice()
+const initialNormalizationEnabled =
+  localStorage.getItem("normalizationEnabled") === "true" // default false
+
+// Apply persisted gains to the real nodes before first playback.
+eqFilters.forEach((filter, i) => {
+  filter.gain.value = initialEqEnabled ? initialEqBands[i] : 0
+})
+
+// Output device selection, via the Audio Output Devices API
+// (AudioContext.setSinkId) — a direct Chromium/Web Audio feature, no manual
+// MediaStreamAudioDestinationNode/hidden-<audio> routing needed. "" means
+// the system default device.
+const initialOutputDeviceId = localStorage.getItem("outputDeviceId") || ""
+if (initialOutputDeviceId && typeof audioCtx.setSinkId === "function") {
+  audioCtx.setSinkId(initialOutputDeviceId).catch((err) => {
+    console.warn("Saved output device unavailable, using default:", err)
+  })
+}
+
+// Live-adaptive loudness normalization (NOT true LUFS/EBU R128, and not a
+// continuous compressor/leveler either): the analyser is sampled for a short
+// window at the start of each track, one RMS-based gain is computed from
+// that window, then held steady for the rest of the track — matching
+// "normalize per track" semantics without needing the whole file decoded
+// upfront. Upgrade path: replace with a proper ITU-R BS.1770 K-weighted
+// loudness meter if perceptual accuracy becomes a requirement.
+const TARGET_RMS_DBFS = -18
+const NORMALIZATION_MEASURE_WINDOW_SEC = 1.5
+let normMeasureSumSquares = 0
+let normMeasureCount = 0
+let normMeasureStartTime = 0
+let normSettled = true
+const normSampleBuffer = new Float32Array(normalizerAnalyser.fftSize)
+
+function gainDbFromRms(rms) {
+  if (rms <= 0 || !isFinite(rms)) return 0 // silent/degenerate signal: no boost
+  const measuredDb = 20 * Math.log10(rms)
+  const gainDb = TARGET_RMS_DBFS - measuredDb
+  return Math.max(-12, Math.min(12, gainDb))
+}
+
+function resetNormalizationMeasurement() {
+  normMeasureSumSquares = 0
+  normMeasureCount = 0
+  normMeasureStartTime = audioCtx.currentTime
+  normSettled = false
+}
+
+function tickNormalizationMeasurement(normalizationEnabled) {
+  if (!normalizationEnabled || normSettled) return
+
+  normalizerAnalyser.getFloatTimeDomainData(normSampleBuffer)
+  for (let i = 0; i < normSampleBuffer.length; i++) {
+    const s = normSampleBuffer[i]
+    normMeasureSumSquares += s * s
+  }
+  normMeasureCount += normSampleBuffer.length
+
+  const elapsed = audioCtx.currentTime - normMeasureStartTime
+  if (elapsed < NORMALIZATION_MEASURE_WINDOW_SEC || normMeasureCount === 0) return
+
+  const rms = Math.sqrt(normMeasureSumSquares / normMeasureCount)
+  const linear = Math.pow(10, gainDbFromRms(rms) / 20)
+  normalizationGain.gain.setTargetAtTime(linear, audioCtx.currentTime, 0.3)
+  normSettled = true
+}
 
 export const usePlayerStore = defineStore("player", {
   state: () => ({
@@ -30,6 +164,12 @@ export const usePlayerStore = defineStore("player", {
     scrobbleSent: false, // whether the current play has already been scrobbled to Last.fm
     shuffleOrder: [], // shuffled indices
     originalOrder: [], // original order for restoring
+    eqEnabled: initialEqEnabled,
+    eqPreset: initialEqPreset, // preset name, or "Custom"
+    eqBands: initialEqBands, // 10 dB values, -12..12, aligned to EQ_BANDS
+    normalizationEnabled: initialNormalizationEnabled,
+    outputDeviceId: initialOutputDeviceId, // '' = system default
+    outputDevices: [], // populated at runtime via refreshOutputDevices()
   }),
   getters: {
     hasNext: (state) => state.currentIndex < state.queue.length - 1,
@@ -86,102 +226,49 @@ export const usePlayerStore = defineStore("player", {
     },
 
     async playTrack(filePath) {
-      // CRITICAL: Stop and clear previous track FIRST
-      if (currentSource) {
-        window.api.info("Stopping previous track")
-        try {
-          currentSource.onended = null
-          currentSource.stop()
-          currentSource.disconnect()
-          currentSource.buffer = null
-        } catch (e) {
-          // Already stopped
-        }
-        currentSource = null
-      }
-
-      // Clear old buffer BEFORE loading new one
-      if (currentAudioBuffer) {
-        window.api.info("Clearing previous AudioBuffer")
-        currentAudioBuffer = null
-      }
-
       try {
         window.api.info("Playing track:", filePath)
 
-        let audioBuffer
+        audioEl.pause()
+        audioEl.src = toStreamUrl(filePath)
+        audioEl.load()
 
-        // Get file size
-        const fileSize = await window.api.getFileSize(filePath)
-        window.api.info("File size:", fileSize, "bytes")
-
-        // Stream file in chunks
-        const chunkSize = fileSize > 10 * 1024 * 1024 ? 512 * 1024 : 256 * 1024
-        const chunks = []
-        let offset = 0
-
-        while (offset < fileSize) {
-          const size = Math.min(chunkSize, fileSize - offset)
-          const chunk = await window.api.streamChunk(filePath, offset, size)
-          chunks.push(chunk)
-          offset += size
+        resetNormalizationMeasurement()
+        if (!this.normalizationEnabled) {
+          normalizationGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.01)
         }
 
-        // Combine chunks
-        const totalLength = chunks.reduce(
-          (acc, chunk) => acc + chunk.byteLength,
-          0
-        )
-        const combinedBuffer = new ArrayBuffer(totalLength)
-        const combinedView = new Uint8Array(combinedBuffer)
+        if (audioCtx.state === "suspended") await audioCtx.resume()
+        await audioEl.play()
 
-        let position = 0
-        for (const chunk of chunks) {
-          combinedView.set(new Uint8Array(chunk), position)
-          position += chunk.byteLength
-        }
-
-        // Decode audio
-        window.api.info("Decoding audio buffer...")
-        audioBuffer = await audioCtx.decodeAudioData(combinedBuffer)
-
-        // Store buffer reference for memory tracking
-        currentAudioBuffer = audioBuffer
-
-        // Stop previous track if playing
-        if (currentSource) {
-          window.api.info("Stopping previous track")
-          try {
-            // prevent auto-triggering of onended during manual stop
-            currentSource.onended = null
-
-            currentSource.stop()
-            currentSource.disconnect()
-          } catch (e) {
-            // Already stopped, ignore
-          }
-        }
-
-        // Play new track
-        const source = audioCtx.createBufferSource()
-        source.buffer = audioBuffer
-        source.connect(gainNode)
-        source.start(0)
-        _playStartTime = audioCtx.currentTime // reset reference point
         this.currentTime = 0
         this.progress = 0
-        this.duration = audioBuffer.duration
+        this.duration = isFinite(audioEl.duration) ? audioEl.duration : 0
         this.startProgressUpdater()
-
-        currentSource = source
         this.isPlaying = true
 
         // Handle track end
-        source.onended = () => {
+        audioEl.onended = async () => {
           window.api.info("Track ended")
 
-          // Try to play next track
-          const hasNext = this.playNext()
+          if (this.repeatMode === "one") {
+            audioEl.currentTime = 0
+            await audioEl.play()
+            return
+          }
+
+          let hasNext = await this.playNext()
+
+          // Repeat-all: wrap back to the start of the queue instead of stopping
+          if (!hasNext && this.repeatMode === "all" && this.queue.length > 0) {
+            const order = this.shuffleEnabled ? this.shuffleOrder : null
+            this.currentIndex = 0
+            const firstTrack = order?.length
+              ? this.queue[order[0]]
+              : this.queue[0]
+            await this.setTrack(firstTrack, false)
+            hasNext = true
+          }
 
           // Only set to false if no next track
           if (!hasNext) {
@@ -190,7 +277,6 @@ export const usePlayerStore = defineStore("player", {
           }
         }
       } catch (err) {
-        console.error("Error playing track:", err)
         console.error("Error playing track:", err)
 
         // error toast
@@ -212,7 +298,6 @@ export const usePlayerStore = defineStore("player", {
       if (this.progressTimer) clearInterval(this.progressTimer)
       this.currentTime = 0
       this.progress = 0
-      _playStartTime = audioCtx.currentTime
 
       const order = this.shuffleEnabled
         ? this.shuffleOrder
@@ -243,7 +328,6 @@ export const usePlayerStore = defineStore("player", {
       if (this.progressTimer) clearInterval(this.progressTimer)
       this.currentTime = 0
       this.progress = 0
-      _playStartTime = audioCtx.currentTime
 
       const order = this.shuffleEnabled
         ? this.shuffleOrder
@@ -298,28 +382,106 @@ export const usePlayerStore = defineStore("player", {
 
       // play - pause
       if (this.isPlaying) {
-        await audioCtx.suspend()
+        audioEl.pause()
         this.isPlaying = false
         return
       }
 
-      // pause - play
-      if (audioCtx.state === "suspended" && currentSource) {
-        await audioCtx.resume()
-        this.isPlaying = true
-        return
-      }
+      if (audioCtx.state === "suspended") await audioCtx.resume()
 
-      // play new track
-      if (!currentSource) {
+      // pause - play (track already loaded) vs play new track
+      if (audioEl.src) {
+        await audioEl.play()
+      } else {
         await this.playTrack(this.currentTrack.file_path)
-        this.isPlaying = true
       }
+      this.isPlaying = true
     },
 
     setVolume(level) {
       this.volume = Math.max(0, Math.min(level, 1))
-      gainNode.gain.setTargetAtTime(this.volume, audioCtx.currentTime, 0.01)
+      // Cubic taper approximates perceived loudness so the slider's range
+      // feels even, instead of most change being audible only near the top.
+      const perceptualGain = this.volume === 0 ? 0 : Math.pow(this.volume, 3)
+      gainNode.gain.setTargetAtTime(perceptualGain, audioCtx.currentTime, 0.01)
+    },
+
+    setEQBand(index, gainDb) {
+      const clamped = Math.max(-12, Math.min(12, gainDb))
+      this.eqBands = this.eqBands.map((v, i) => (i === index ? clamped : v))
+      this.eqPreset = "Custom"
+      if (this.eqEnabled) {
+        eqFilters[index].gain.setTargetAtTime(clamped, audioCtx.currentTime, 0.01)
+      }
+      localStorage.setItem("eqBands", JSON.stringify(this.eqBands))
+      localStorage.setItem("eqPreset", "Custom")
+    },
+
+    applyEQPreset(name) {
+      const bands = EQ_PRESETS[name]
+      if (!bands) return
+      this.eqBands = bands.slice()
+      this.eqPreset = name
+      if (this.eqEnabled) {
+        eqFilters.forEach((filter, i) => {
+          filter.gain.setTargetAtTime(this.eqBands[i], audioCtx.currentTime, 0.01)
+        })
+      }
+      localStorage.setItem("eqBands", JSON.stringify(this.eqBands))
+      localStorage.setItem("eqPreset", name)
+    },
+
+    setEQEnabled(enabled) {
+      this.eqEnabled = enabled
+      eqFilters.forEach((filter, i) => {
+        const target = enabled ? this.eqBands[i] : 0
+        filter.gain.setTargetAtTime(target, audioCtx.currentTime, 0.01)
+      })
+      localStorage.setItem("eqEnabled", String(enabled))
+    },
+
+    setNormalizationEnabled(enabled) {
+      this.normalizationEnabled = enabled
+      localStorage.setItem("normalizationEnabled", String(enabled))
+      if (enabled) {
+        resetNormalizationMeasurement()
+      } else {
+        normalizationGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.01)
+      }
+    },
+
+    async refreshOutputDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        this.outputDevices = devices.filter((d) => d.kind === "audiooutput")
+      } catch (err) {
+        console.error("Failed to enumerate output devices:", err)
+      }
+    },
+
+    // Device labels are hidden until the user grants a media permission at
+    // least once (a browser privacy measure) - request+immediately drop a
+    // mic stream purely to unlock labels, then re-enumerate.
+    async requestDeviceLabelsPermission() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((track) => track.stop())
+        await this.refreshOutputDevices()
+      } catch (err) {
+        console.error("Microphone permission denied, device names unavailable:", err)
+      }
+    },
+
+    async setOutputDevice(deviceId) {
+      this.outputDeviceId = deviceId
+      localStorage.setItem("outputDeviceId", deviceId)
+      if (typeof audioCtx.setSinkId !== "function") return
+      try {
+        await audioCtx.setSinkId(deviceId)
+      } catch (err) {
+        console.error("Failed to set output device:", err)
+        window.api.showToast?.("Couldn't switch to that output device.", "error")
+      }
     },
 
     async getLyrics() {
@@ -411,7 +573,6 @@ export const usePlayerStore = defineStore("player", {
     checkAudioMemory() {
       window.api.info("=== Audio Memory Check ===")
 
-      // Check AudioContext state
       window.api.info("AudioContext state:", audioCtx.state)
       window.api.info("AudioContext sample rate:", audioCtx.sampleRate)
       window.api.info(
@@ -419,29 +580,9 @@ export const usePlayerStore = defineStore("player", {
         audioCtx.currentTime.toFixed(2),
         "s"
       )
-
-      // Check if source exists
-      window.api.info("Current source exists:", !!currentSource)
-      window.api.info("Current buffer exists:", !!currentAudioBuffer)
-
-      // Estimate buffer size if exists
-      if (currentAudioBuffer) {
-        const channels = currentAudioBuffer.numberOfChannels
-        const length = currentAudioBuffer.length
-        const sampleRate = currentAudioBuffer.sampleRate
-        const duration = currentAudioBuffer.duration
-
-        // Each sample is 4 bytes (32-bit float)
-        const sizeInBytes = channels * length * 4
-        const sizeInMB = Math.round(sizeInBytes / 1024 / 1024)
-
-        window.api.info("AudioBuffer details:")
-        window.api.info("  Channels:", channels)
-        window.api.info("  Length:", length.toLocaleString(), "samples")
-        window.api.info("  Sample rate:", sampleRate, "Hz")
-        window.api.info("  Duration:", Math.round(duration), "seconds")
-        window.api.info("  Estimated size:", sizeInMB, "MB")
-      }
+      window.api.info("Audio element src set:", !!audioEl.src)
+      window.api.info("Audio element readyState:", audioEl.readyState)
+      window.api.info("Audio element duration:", audioEl.duration)
 
       // Check performance memory
       if (performance.memory) {
@@ -466,27 +607,27 @@ export const usePlayerStore = defineStore("player", {
       window.api.info("======================")
     },
 
-    // Frame-accurate playback position, independent of the 200ms progress-bar
-    // interval — used for lyric sync, which needs finer-grained updates.
+    // Frame-accurate playback position — used for lyric sync, which needs
+    // finer-grained updates than the 200ms progress-bar interval.
     getLiveTime() {
-      if (!this.isPlaying || !currentSource || !currentAudioBuffer) {
-        return this.currentTime
-      }
-      return Math.min(
-        audioCtx.currentTime - _playStartTime,
-        currentAudioBuffer.duration
-      )
+      return audioEl.currentTime || this.currentTime
     },
 
     startProgressUpdater() {
       if (this.progressTimer) clearInterval(this.progressTimer)
 
       this.progressTimer = setInterval(() => {
-        if (this.isPlaying && currentSource && currentAudioBuffer) {
-          const elapsed = audioCtx.currentTime - _playStartTime
-          this.currentTime = Math.min(elapsed, currentAudioBuffer.duration)
-          this.duration = currentAudioBuffer.duration
-          this.progress = Math.min(this.currentTime / this.duration, 1)
+        if (this.isPlaying) {
+          tickNormalizationMeasurement(this.normalizationEnabled)
+
+          this.currentTime = audioEl.currentTime
+          this.duration = isFinite(audioEl.duration)
+            ? audioEl.duration
+            : this.duration
+          this.progress =
+            this.duration > 0
+              ? Math.min(this.currentTime / this.duration, 1)
+              : 0
 
           // Last.fm scrobble rule: half the track or 4 minutes, whichever
           // is lower, and only for tracks longer than 30s.
@@ -505,42 +646,16 @@ export const usePlayerStore = defineStore("player", {
       }, 200)
     },
 
-    async seekTo(targetTime) {
+    seekTo(targetTime) {
       if (!this.currentTrack?.file_path) return
-      if (!currentAudioBuffer) return
+      if (!isFinite(audioEl.duration)) return
 
-      // seek time
-      const t = Math.max(0, Math.min(targetTime, currentAudioBuffer.duration))
-
-      try {
-        if (currentSource) {
-          currentSource.onended = null
-          currentSource.stop()
-          currentSource.disconnect()
-        }
-
-        const src = audioCtx.createBufferSource()
-        src.buffer = currentAudioBuffer
-        src.connect(gainNode)
-        src.start(0, t)
-
-        currentSource = src
-        this.isPlaying = true
-        this.currentTime = t
-        this.duration = currentAudioBuffer.duration
-        this.progress = t / this.duration
-        _playStartTime = audioCtx.currentTime - t
-
-        // restart progress tracking
-        this.startProgressUpdater()
-
-        src.onended = () => {
-          const hasNext = this.playNext()
-          if (!hasNext) this.isPlaying = false
-        }
-      } catch (e) {
-        console.error("Seek error:", e)
-      }
+      // Setting currentTime on a native media element preserves play/pause
+      // state on its own — no manual "was it playing" bookkeeping needed.
+      const t = Math.max(0, Math.min(targetTime, audioEl.duration))
+      audioEl.currentTime = t
+      this.currentTime = t
+      this.progress = audioEl.duration > 0 ? t / audioEl.duration : 0
     },
   },
 })

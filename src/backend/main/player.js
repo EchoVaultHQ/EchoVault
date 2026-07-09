@@ -16,27 +16,6 @@ export function registerPlayerHandlers(mainWindow, db) {
     }
   })
 
-  ipcMain.handle(
-    "player:streamChunk",
-    async (event, trackPath, offset, size) => {
-      try {
-        const buffer = Buffer.alloc(size)
-        const fd = fs.openSync(trackPath, "r")
-        const bytesRead = fs.readSync(fd, buffer, 0, size, offset)
-        fs.closeSync(fd)
-
-        // Return only the bytes actually read
-        return buffer.buffer.slice(
-          buffer.byteOffset,
-          buffer.byteOffset + bytesRead
-        )
-      } catch (err) {
-        console.error("Failed to read chunk:", err)
-        throw err
-      }
-    }
-  )
-
   ipcMain.handle("player:getFileSize", (event, trackPath) => {
     try {
       return fs.statSync(trackPath).size
@@ -83,10 +62,10 @@ export function registerPlayerHandlers(mainWindow, db) {
       win.setResizable(true)
 
       // Remove size constraints
-      const normalWidth = 1200
-      const normalHeight = 900
-      const minWidth = 800
-      const minHeight = 600
+      const normalWidth = 1280
+      const normalHeight = 700
+      const minWidth = 350
+      const minHeight = 634
 
       win.setMinimumSize(minWidth, minHeight)
       win.setMaximumSize(0, 0) // remove maximum size limit

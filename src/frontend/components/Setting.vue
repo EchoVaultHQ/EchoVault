@@ -286,7 +286,7 @@
                 </template>
               </div>
 
-              <div class="setting-group disabled">
+              <div class="setting-group">
                 <div class="setting-label">
                   <i class="fa-solid fa-sliders"></i>
                   <div>
@@ -294,12 +294,28 @@
                     <p>{{ t("settings.audio.equalizer.description") }}</p>
                   </div>
                 </div>
-                <div class="coming-soon-badge">
-                  {{ t("settings.comingSoon") }}
+                <div class="eq-enable-row">
+                  <span>{{ t("settings.audio.equalizer.enable") }}</span>
+                  <button
+                    class="toggle-switch"
+                    :class="{ active: player.eqEnabled }"
+                    role="switch"
+                    :aria-checked="player.eqEnabled"
+                    @click="player.setEQEnabled(!player.eqEnabled)"
+                  >
+                    <span class="toggle-knob"></span>
+                  </button>
                 </div>
+                <EqualizerPanel
+                  :bands="player.eqBands"
+                  :preset="player.eqPreset"
+                  :enabled="player.eqEnabled"
+                  @update-band="(i, v) => player.setEQBand(i, v)"
+                  @update-preset="(name) => player.applyEQPreset(name)"
+                />
               </div>
 
-              <div class="setting-group disabled">
+              <div class="setting-group">
                 <div class="setting-label">
                   <i class="fa-solid fa-volume-high"></i>
                   <div>
@@ -307,8 +323,85 @@
                     <p>{{ t("settings.audio.normalization.description") }}</p>
                   </div>
                 </div>
-                <div class="coming-soon-badge">
-                  {{ t("settings.comingSoon") }}
+                <div class="eq-enable-row">
+                  <span>{{ t("settings.audio.normalization.enable") }}</span>
+                  <button
+                    class="toggle-switch"
+                    :class="{ active: player.normalizationEnabled }"
+                    role="switch"
+                    :aria-checked="player.normalizationEnabled"
+                    @click="
+                      player.setNormalizationEnabled(
+                        !player.normalizationEnabled
+                      )
+                    "
+                  >
+                    <span class="toggle-knob"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Devices Tab -->
+            <div v-if="activeTab === 'devices'" class="tab-content">
+              <h2 class="section-title">{{ t("settings.devices.title") }}</h2>
+              <p class="section-description">
+                {{ t("settings.devices.description") }}
+              </p>
+
+              <div class="setting-group">
+                <div class="setting-label">
+                  <i class="fa-solid fa-headphones"></i>
+                  <div>
+                    <h3>{{ t("settings.devices.output.title") }}</h3>
+                    <p>{{ t("settings.devices.output.description") }}</p>
+                  </div>
+                </div>
+
+                <p v-if="!hasDeviceLabels" class="section-description">
+                  {{ t("settings.devices.output.permissionHint") }}
+                  <button
+                    class="theme-option"
+                    @click="player.requestDeviceLabelsPermission()"
+                  >
+                    {{ t("settings.devices.output.grantPermission") }}
+                  </button>
+                </p>
+
+                <div class="language-selector">
+                  <button
+                    class="language-option"
+                    :class="{ active: player.outputDeviceId === '' }"
+                    @click="player.setOutputDevice('')"
+                  >
+                    <div>
+                      <div class="lang-name">
+                        {{ t("settings.devices.output.systemDefault") }}
+                      </div>
+                    </div>
+                    <i
+                      v-if="player.outputDeviceId === ''"
+                      class="fa-solid fa-check"
+                    ></i>
+                  </button>
+
+                  <button
+                    v-for="device in player.outputDevices"
+                    :key="device.deviceId"
+                    class="language-option"
+                    :class="{ active: player.outputDeviceId === device.deviceId }"
+                    @click="player.setOutputDevice(device.deviceId)"
+                  >
+                    <div>
+                      <div class="lang-name">
+                        {{ device.label || t("settings.devices.output.unnamedDevice") }}
+                      </div>
+                    </div>
+                    <i
+                      v-if="player.outputDeviceId === device.deviceId"
+                      class="fa-solid fa-check"
+                    ></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -395,16 +488,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue"
+import { ref, onMounted, computed, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { useThemeStore } from "../store/theme.js"
 import { useAccentStore } from "../store/accent.js"
 import { useLastfmStore } from "../store/lastfm.js"
+import { usePlayerStore } from "../store/player.js"
+import EqualizerPanel from "./EqualizerPanel.vue"
 
 const props = defineProps({
   showSettingMenu: {
     type: Boolean,
     required: true,
+  },
+  initialTab: {
+    type: String,
+    default: "appearance",
   },
 })
 
@@ -412,11 +511,27 @@ const emit = defineEmits(["close"])
 const themeStore = useThemeStore()
 const accentStore = useAccentStore()
 const lastfmStore = useLastfmStore()
+const player = usePlayerStore()
 const lastfmApiKey = ref("")
 const lastfmApiSecret = ref("")
 const { locale, t } = useI18n()
 
 const activeTab = ref("appearance")
+
+watch(
+  () => props.showSettingMenu,
+  (isOpen) => {
+    if (isOpen) activeTab.value = props.initialTab ?? "appearance"
+  }
+)
+
+watch(activeTab, (tab) => {
+  if (tab === "devices") player.refreshOutputDevices()
+})
+
+const hasDeviceLabels = computed(() =>
+  player.outputDevices.some((d) => d.label)
+)
 
 // use store for theme
 const isDarkMode = computed(() => themeStore.theme === "dark")
@@ -446,6 +561,11 @@ const tabs = [
   },
   { id: "audio", labelKey: "settings.tabs.audio", icon: "fa-solid fa-sliders" },
   {
+    id: "devices",
+    labelKey: "settings.tabs.devices",
+    icon: "fa-solid fa-headphones",
+  },
+  {
     id: "shortcuts",
     labelKey: "settings.tabs.shortcuts",
     icon: "fa-solid fa-keyboard",
@@ -457,7 +577,7 @@ const tabs = [
   },
 ]
 
-const version = "2.0.0-beta"
+const version = "2.1.0-beta"
 
 const setTheme = (theme) => {
   themeStore.setTheme(theme)
@@ -659,6 +779,14 @@ onMounted(() => {
   font-size: 0.9rem;
   color: var(--muted-text);
   margin: 0;
+}
+
+.eq-enable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: var(--text-color);
 }
 
 /* Theme Toggle */

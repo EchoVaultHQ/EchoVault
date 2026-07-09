@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     headers: {
       "Content-Security-Policy":
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: echovault-cover:; media-src 'self' echovault-cover: file:;",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: echovault-cover:; media-src 'self' echovault-cover: echovault-audio: file:;",
     },
   },
   plugins: [
