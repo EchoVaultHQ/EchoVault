@@ -109,9 +109,18 @@
       "appearance": "Appearance",
       "language": "Language & Region",
       "audio": "Audio",
-      "devices": "Devices",
+      "audioDevices": "Devices",
+      "connectors": "Connectors",
       "shortcuts": "Shortcuts",
       "about": "About"
+    },
+    "connectors": {
+      "title": "Connectors",
+      "description": "Connect EchoVault with online music services and integrations."
+    },
+    "audioDevices": {
+      "title": "Audio Devices",
+      "description": "Select where music is played."
     },
     "appearance": {
       "title": "Appearance",

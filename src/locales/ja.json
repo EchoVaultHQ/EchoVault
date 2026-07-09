@@ -111,9 +111,20 @@
       "appearance": "外観",
       "language": "言語・地域",
       "audio": "オーディオ",
-      "devices": "デバイス",
+      "audioDevices": "デバイス",
+      "connectors": "連携サービス",
       "shortcuts": "ショートカット",
       "about": "情報"
+    },
+    
+    "connectors": {
+      "title": "連携サービス",
+      "description": "Echoをオンライン音楽サービスや外部サービスと連携します。"
+    },
+
+    "audioDevices": {
+      "title": "オーディオデバイス",
+      "description": "音楽を再生する出力デバイスを選択します。"
     },
     "appearance": {
       "title": "外観",

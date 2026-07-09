@@ -5,12 +5,8 @@
         <!-- Header -->
         <div class="settings-header">
           <h1 class="settings-title">{{ t("settings.title") }}</h1>
-          <button
-            @click="$emit('close')"
-            class="close-button"
-            :aria-label="t('settings.close')"
-            title="t('settings.close')"
-          >
+          <button @click="$emit('close')" class="close-button" :aria-label="t('settings.close')"
+            title="t('settings.close')">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -19,13 +15,8 @@
         <div class="settings-content">
           <!-- Sidebar Tabs -->
           <div class="settings-sidebar">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              class="tab-button"
-              :class="{ active: activeTab === tab.id }"
-            >
+            <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="tab-button"
+              :class="{ active: activeTab === tab.id }">
               <i :class="tab.icon"></i>
               <span>{{ t(tab.labelKey) }}</span>
             </button>
@@ -52,20 +43,12 @@
                   </div>
                 </div>
                 <div class="theme-toggle">
-                  <button
-                    @click="setTheme('light')"
-                    class="theme-option"
-                    :class="{ active: !isDarkMode }"
-                  >
+                  <button @click="setTheme('light')" class="theme-option" :class="{ active: !isDarkMode }">
                     <i class="fa-solid fa-sun"></i>
                     <span>{{ t("settings.appearance.themeMode.light") }}</span>
                   </button>
 
-                  <button
-                    @click="setTheme('dark')"
-                    class="theme-option"
-                    :class="{ active: isDarkMode }"
-                  >
+                  <button @click="setTheme('dark')" class="theme-option" :class="{ active: isDarkMode }">
                     <i class="fa-solid fa-moon"></i>
                     <span>{{ t("settings.appearance.themeMode.dark") }}</span>
                   </button>
@@ -82,18 +65,10 @@
                   </div>
                 </div>
                 <div class="color-grid">
-                  <div
-                    v-for="color in accentStore.accentColors"
-                    :key="color.key"
-                    @click="accentStore.setAccent(color.value)"
-                    class="color-swatch"
-                    :class="{ active: accentStore.accentColor === color.value }"
-                    :style="{ background: color.value }"
-                  >
-                    <i
-                      v-if="accentStore.accentColor === color.value"
-                      class="fa-solid fa-check"
-                    ></i>
+                  <div v-for="color in accentStore.accentColors" :key="color.key"
+                    @click="accentStore.setAccent(color.value)" class="color-swatch"
+                    :class="{ active: accentStore.accentColor === color.value }" :style="{ background: color.value }">
+                    <i v-if="accentStore.accentColor === color.value" class="fa-solid fa-check"></i>
                   </div>
                 </div>
               </div>
@@ -117,11 +92,8 @@
                   </div>
                 </div>
                 <div class="language-selector">
-                  <button
-                    @click="setLanguage('en')"
-                    class="language-option"
-                    :class="{ active: currentLocale === 'en' }"
-                  >
+                  <button @click="setLanguage('en')" class="language-option"
+                    :class="{ active: currentLocale === 'en' }">
                     <span class="flag">🇬🇧</span>
                     <div>
                       <div class="lang-name">
@@ -131,16 +103,10 @@
                         {{ t("settings.language.languages.en.native") }}
                       </div>
                     </div>
-                    <i
-                      v-if="currentLocale === 'en'"
-                      class="fa-solid fa-check"
-                    ></i>
+                    <i v-if="currentLocale === 'en'" class="fa-solid fa-check"></i>
                   </button>
-                  <button
-                    @click="setLanguage('ja')"
-                    class="language-option"
-                    :class="{ active: currentLocale === 'ja' }"
-                  >
+                  <button @click="setLanguage('ja')" class="language-option"
+                    :class="{ active: currentLocale === 'ja' }">
                     <span class="flag">🇯🇵</span>
                     <div>
                       <div class="lang-name">
@@ -150,10 +116,7 @@
                         {{ t("settings.language.languages.ja.native") }}
                       </div>
                     </div>
-                    <i
-                      v-if="currentLocale === 'ja'"
-                      class="fa-solid fa-check"
-                    ></i>
+                    <i v-if="currentLocale === 'ja'" class="fa-solid fa-check"></i>
                   </button>
                 </div>
               </div>
@@ -168,19 +131,63 @@
 
               <div class="setting-group">
                 <div class="setting-label">
+                  <i class="fa-solid fa-sliders"></i>
+                  <div>
+                    <h3>{{ t("settings.audio.equalizer.title") }}</h3>
+                    <p>{{ t("settings.audio.equalizer.description") }}</p>
+                  </div>
+                </div>
+                <div class="eq-enable-row">
+                  <span>{{ t("settings.audio.equalizer.enable") }}</span>
+                  <button class="toggle-switch" :class="{ active: player.eqEnabled }" role="switch"
+                    :aria-checked="player.eqEnabled" @click="player.setEQEnabled(!player.eqEnabled)">
+                    <span class="toggle-knob"></span>
+                  </button>
+                </div>
+                <EqualizerPanel :bands="player.eqBands" :preset="player.eqPreset" :enabled="player.eqEnabled"
+                  @update-band="(i, v) => player.setEQBand(i, v)"
+                  @update-preset="(name) => player.applyEQPreset(name)" />
+              </div>
+
+              <div class="setting-group">
+                <div class="setting-label">
+                  <i class="fa-solid fa-volume-high"></i>
+                  <div>
+                    <h3>{{ t("settings.audio.normalization.title") }}</h3>
+                    <p>{{ t("settings.audio.normalization.description") }}</p>
+                  </div>
+                </div>
+                <div class="eq-enable-row">
+                  <span>{{ t("settings.audio.normalization.enable") }}</span>
+                  <button class="toggle-switch" :class="{ active: player.normalizationEnabled }" role="switch"
+                    :aria-checked="player.normalizationEnabled" @click="
+                      player.setNormalizationEnabled(
+                        !player.normalizationEnabled
+                      )
+                      ">
+                    <span class="toggle-knob"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Connectors Tab -->
+            <div v-if="activeTab === 'connectors'" class="tab-content">
+              <h2 class="section-title">{{ t("settings.connectors.title") }}</h2>
+              <p class="section-description">
+                {{ t("settings.connectors.description") }}
+              </p>
+
+              <div class="setting-group">
+                <div class="setting-label">
                   <i class="fa-solid fa-cloud"></i>
                   <div>
                     <h3>{{ t("settings.audio.onlineLyrics.title") }}</h3>
                     <p>{{ t("settings.audio.onlineLyrics.description") }}</p>
                   </div>
                 </div>
-                <button
-                  class="toggle-switch"
-                  :class="{ active: fetchLyricsOnline }"
-                  role="switch"
-                  :aria-checked="fetchLyricsOnline"
-                  @click="toggleFetchLyricsOnline"
-                >
+                <button class="toggle-switch" :class="{ active: fetchLyricsOnline }" role="switch"
+                  :aria-checked="fetchLyricsOnline" @click="toggleFetchLyricsOnline">
                   <span class="toggle-knob"></span>
                 </button>
               </div>
@@ -197,30 +204,15 @@
                 <template v-if="!lastfmStore.hasCredentials">
                   <p class="section-description">
                     {{ t("settings.audio.lastfm.credentialsHint") }}
-                    <a
-                      href="https://www.last.fm/api/account/create"
-                      target="_blank"
-                      >last.fm/api/account/create</a
-                    >
+                    <a href="https://www.last.fm/api/account/create" target="_blank">last.fm/api/account/create</a>
                   </p>
-                  <input
-                    v-model="lastfmApiKey"
-                    type="text"
-                    class="lastfm-input"
-                    :placeholder="t('settings.audio.lastfm.apiKeyLabel')"
-                  />
-                  <input
-                    v-model="lastfmApiSecret"
-                    type="password"
-                    class="lastfm-input"
-                    :placeholder="t('settings.audio.lastfm.apiSecretLabel')"
-                  />
-                  <button
-                    class="theme-option"
-                    @click="
-                      lastfmStore.saveCredentials(lastfmApiKey, lastfmApiSecret)
-                    "
-                  >
+                  <input v-model="lastfmApiKey" type="text" class="lastfm-input"
+                    :placeholder="t('settings.audio.lastfm.apiKeyLabel')" />
+                  <input v-model="lastfmApiSecret" type="password" class="lastfm-input"
+                    :placeholder="t('settings.audio.lastfm.apiSecretLabel')" />
+                  <button class="theme-option" @click="
+                    lastfmStore.saveCredentials(lastfmApiKey, lastfmApiSecret)
+                    ">
                     {{ t("settings.audio.lastfm.saveAndConnect") }}
                   </button>
                   <p v-if="lastfmStore.error" class="section-description">
@@ -232,21 +224,14 @@
                   </p>
                 </template>
                 <template v-else-if="!lastfmStore.connected">
-                  <button
-                    v-if="!lastfmStore.authPending"
-                    class="theme-option"
-                    @click="lastfmStore.connect()"
-                  >
+                  <button v-if="!lastfmStore.authPending" class="theme-option" @click="lastfmStore.connect()">
                     {{ t("settings.audio.lastfm.connect") }}
                   </button>
                   <template v-else>
                     <p class="section-description">
                       {{ t("settings.audio.lastfm.authorizeHint") }}
                     </p>
-                    <button
-                      class="theme-option active"
-                      @click="lastfmStore.confirmAuth()"
-                    >
+                    <button class="theme-option active" @click="lastfmStore.confirmAuth()">
                       {{ t("settings.audio.lastfm.confirm") }}
                     </button>
                   </template>
@@ -267,79 +252,17 @@
                     }}
                   </p>
                   <div class="theme-toggle">
-                    <button
-                      class="toggle-switch"
-                      :class="{ active: lastfmStore.scrobblingEnabled }"
-                      role="switch"
-                      :aria-checked="lastfmStore.scrobblingEnabled"
-                      @click="lastfmStore.toggleEnabled()"
-                    >
+                    <button class="toggle-switch" :class="{ active: lastfmStore.scrobblingEnabled }" role="switch"
+                      :aria-checked="lastfmStore.scrobblingEnabled" @click="lastfmStore.toggleEnabled()">
                       <span class="toggle-knob"></span>
                     </button>
-                    <button
-                      class="theme-option"
-                      @click="lastfmStore.disconnect()"
-                    >
+                    <button class="theme-option" @click="lastfmStore.disconnect()">
                       {{ t("settings.audio.lastfm.disconnect") }}
                     </button>
                   </div>
                 </template>
               </div>
 
-              <div class="setting-group">
-                <div class="setting-label">
-                  <i class="fa-solid fa-sliders"></i>
-                  <div>
-                    <h3>{{ t("settings.audio.equalizer.title") }}</h3>
-                    <p>{{ t("settings.audio.equalizer.description") }}</p>
-                  </div>
-                </div>
-                <div class="eq-enable-row">
-                  <span>{{ t("settings.audio.equalizer.enable") }}</span>
-                  <button
-                    class="toggle-switch"
-                    :class="{ active: player.eqEnabled }"
-                    role="switch"
-                    :aria-checked="player.eqEnabled"
-                    @click="player.setEQEnabled(!player.eqEnabled)"
-                  >
-                    <span class="toggle-knob"></span>
-                  </button>
-                </div>
-                <EqualizerPanel
-                  :bands="player.eqBands"
-                  :preset="player.eqPreset"
-                  :enabled="player.eqEnabled"
-                  @update-band="(i, v) => player.setEQBand(i, v)"
-                  @update-preset="(name) => player.applyEQPreset(name)"
-                />
-              </div>
-
-              <div class="setting-group">
-                <div class="setting-label">
-                  <i class="fa-solid fa-volume-high"></i>
-                  <div>
-                    <h3>{{ t("settings.audio.normalization.title") }}</h3>
-                    <p>{{ t("settings.audio.normalization.description") }}</p>
-                  </div>
-                </div>
-                <div class="eq-enable-row">
-                  <span>{{ t("settings.audio.normalization.enable") }}</span>
-                  <button
-                    class="toggle-switch"
-                    :class="{ active: player.normalizationEnabled }"
-                    role="switch"
-                    :aria-checked="player.normalizationEnabled"
-                    @click="
-                      player.setNormalizationEnabled(
-                        !player.normalizationEnabled
-                      )
-                    "
-                  >
-                    <span class="toggle-knob"></span>
-                  </button>
-                </div>
-              </div>
             </div>
 
             <!-- Devices Tab -->
@@ -360,47 +283,31 @@
 
                 <p v-if="!hasDeviceLabels" class="section-description">
                   {{ t("settings.devices.output.permissionHint") }}
-                  <button
-                    class="theme-option"
-                    @click="player.requestDeviceLabelsPermission()"
-                  >
+                  <button class="theme-option" @click="player.requestDeviceLabelsPermission()">
                     {{ t("settings.devices.output.grantPermission") }}
                   </button>
                 </p>
 
                 <div class="language-selector">
-                  <button
-                    class="language-option"
-                    :class="{ active: player.outputDeviceId === '' }"
-                    @click="player.setOutputDevice('')"
-                  >
+                  <button class="language-option" :class="{ active: player.outputDeviceId === '' }"
+                    @click="player.setOutputDevice('')">
                     <div>
                       <div class="lang-name">
                         {{ t("settings.devices.output.systemDefault") }}
                       </div>
                     </div>
-                    <i
-                      v-if="player.outputDeviceId === ''"
-                      class="fa-solid fa-check"
-                    ></i>
+                    <i v-if="player.outputDeviceId === ''" class="fa-solid fa-check"></i>
                   </button>
 
-                  <button
-                    v-for="device in player.outputDevices"
-                    :key="device.deviceId"
-                    class="language-option"
+                  <button v-for="device in player.outputDevices" :key="device.deviceId" class="language-option"
                     :class="{ active: player.outputDeviceId === device.deviceId }"
-                    @click="player.setOutputDevice(device.deviceId)"
-                  >
+                    @click="player.setOutputDevice(device.deviceId)">
                     <div>
                       <div class="lang-name">
                         {{ device.label || t("settings.devices.output.unnamedDevice") }}
                       </div>
                     </div>
-                    <i
-                      v-if="player.outputDeviceId === device.deviceId"
-                      class="fa-solid fa-check"
-                    ></i>
+                    <i v-if="player.outputDeviceId === device.deviceId" class="fa-solid fa-check"></i>
                   </button>
                 </div>
               </div>
@@ -449,11 +356,7 @@
 
               <div class="about-card">
                 <div class="app-icon">
-                  <img
-                    src="../../frontend/assets/icons/app-icon.png"
-                    alt="App Icon"
-                    class="app-icon"
-                  />
+                  <img src="../../frontend/assets/icons/app-icon.png" alt="App Icon" class="app-icon" />
                 </div>
                 <h3>{{ t("app.name") }}</h3>
                 <p class="version">
@@ -465,17 +368,9 @@
                 <div class="about-links">
                   <p class="attribution">
                     Echo dot icon by
-                    <a
-                      href="https://www.flaticon.com/authors/iyahicon"
-                      target="_blank"
-                      >IYAHICON</a
-                    >
+                    <a href="https://www.flaticon.com/authors/iyahicon" target="_blank">IYAHICON</a>
                     from
-                    <a
-                      href="https://www.flaticon.com/free-icons/echo-dot"
-                      target="_blank"
-                      >Flaticon</a
-                    >
+                    <a href="https://www.flaticon.com/free-icons/echo-dot" target="_blank">Flaticon</a>
                   </p>
                 </div>
               </div>
@@ -559,10 +454,19 @@ const tabs = [
     labelKey: "settings.tabs.language",
     icon: "fa-solid fa-language",
   },
-  { id: "audio", labelKey: "settings.tabs.audio", icon: "fa-solid fa-sliders" },
+  {
+    id: "audio",
+    labelKey: "settings.tabs.audio",
+    icon: "fa-solid fa-sliders",
+  },
+  {
+    id: "connectors",
+    labelKey: "settings.tabs.connectors",
+    icon: "fa-solid fa-link",
+  },
   {
     id: "devices",
-    labelKey: "settings.tabs.devices",
+    labelKey: "settings.tabs.audioDevices",
     icon: "fa-solid fa-headphones",
   },
   {
@@ -715,11 +619,11 @@ onMounted(() => {
   flex: 1;
   padding: 3rem;
   overflow-y: auto;
-  max-width: 900px;
 }
 
 .tab-content {
   animation: fadeInUp 0.3s ease;
+  max-width: 900px;
 }
 
 .section-title {
@@ -762,7 +666,7 @@ onMounted(() => {
   margin-bottom: 1.5rem;
 }
 
-.setting-label > i {
+.setting-label>i {
   font-size: 1.5rem;
   color: var(--accent);
   margin-top: 0.25rem;
@@ -1068,6 +972,7 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
