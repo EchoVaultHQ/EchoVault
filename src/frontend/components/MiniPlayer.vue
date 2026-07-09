@@ -1,59 +1,44 @@
 <template>
   <transition name="fade-slide">
-    <div v-if="showMiniPlayer" class="mini-player-overlay">
-      <!-- Falling Stars Background -->
-      <div class="stars-container">
-        <div
-          v-for="n in 50"
-          :key="n"
-          class="star"
-          :style="getStarStyle(n)"
-        ></div>
-      </div>
+    <div v-if="isMiniPlayerActive" class="mini-player-overlay">
+      <img class="mini-backdrop" :src="backdropSrc" alt="" />
+      <div class="mini-backdrop-tint"></div>
 
       <div class="mini-player">
         <!-- Header -->
         <div class="mini-header">
+          <span class="track-count">
+            {{ t("miniPlayer.trackCount", { current: currentIndex + 1, total: queueLength }) }}
+          </span>
+
           <button
             class="icon-btn"
             @click="exitMiniPlayer"
-            title="Exit Mini Player"
+            :title="t('miniPlayer.close')"
           >
-            <img :src="Playlist" alt="Exit Mini Player" class="icon" />
-          </button>
-
-          <span class="track-count">
-            {{ currentIndex + 1 }}/{{ queueLength }}
-          </span>
-
-          <button class="icon-btn" @click="closeMiniPlayer" title="Close">
-            <img :src="X" alt="Close" class="icon" />
+            <img :src="X" :alt="t('miniPlayer.close')" class="icon" />
           </button>
         </div>
 
-        <!-- Album Art (Spinning) -->
+        <!-- Album Art -->
         <div class="album-art-container">
-          <div class="album-art" :class="{ spinning: player.isPlaying }">
+          <div class="album-art">
             <img
               v-if="player.currentTrack?.coverDataUrl"
               :src="player.currentTrack.coverDataUrl"
               alt="Album Art"
             />
-            <img
-              v-else
-              src="../assets/images/default-cover.svg"
-              alt="Album Art"
-            />
+            <img v-else :src="defaultCover" alt="Album Art" />
           </div>
         </div>
 
         <!-- Track Info -->
         <div class="track-info">
           <h2 class="track-title">
-            {{ player.currentTrack?.title || "No track selected" }}
+            {{ player.currentTrack?.title || t("labels.noTrackSelected") }}
           </h2>
           <p class="track-artist">
-            {{ player.currentTrack?.artist || "Unknown Artist" }}
+            {{ player.currentTrack?.artist || t("labels.unknownArtist") }}
           </p>
           <p class="track-album">{{ player.currentTrack?.album || "" }}</p>
         </div>
@@ -99,7 +84,7 @@
             @click="player.toggleShuffle"
             class="control-btn toggle-shuffle"
             :class="{ active: player.shuffleEnabled }"
-            :title="player.shuffleEnabled ? 'Shuffle: On' : 'Shuffle: Off'"
+            :title="player.shuffleEnabled ? t('miniPlayer.shuffleOn') : t('miniPlayer.shuffleOff')"
           >
             <img :src="Shuffle" alt="Shuffle icon" class="icon" />
           </button>
@@ -108,19 +93,19 @@
             class="control-btn"
             @click="playPreviousTrack"
             :disabled="!player.hasPrevious"
-            title="Previous"
+            :title="t('miniPlayer.previous')"
           >
-            <img :src="Previous" alt="Previous" class="icon" />
+            <img :src="Previous" :alt="t('miniPlayer.previous')" class="icon" />
           </button>
 
           <button
             class="control-btn play-btn"
             @click="togglePlay"
-            title="Play/Pause"
+            :title="t('miniPlayer.playPause')"
           >
             <img
               :src="player.isPlaying ? Pause : Play"
-              alt="Play/Pause"
+              :alt="t('miniPlayer.playPause')"
               class="icon large"
             />
           </button>
@@ -129,21 +114,20 @@
             class="control-btn"
             @click="playNextTrack"
             :disabled="!player.hasNext"
-            title="Next"
+            :title="t('miniPlayer.next')"
           >
-            <img :src="Next" alt="Next" class="icon" />
+            <img :src="Next" :alt="t('miniPlayer.next')" class="icon" />
           </button>
 
           <button
             class="control-btn"
             @click="player.toggleRepeat"
             :class="{ active: player.repeatMode !== 'off' }"
-            title="Repeat"
-            disabled
+            :title="t('miniPlayer.repeat')"
           >
             <img
               :src="player.repeatMode === 'one' ? RepeatOne : Repeat"
-              alt="Repeat"
+              :alt="t('miniPlayer.repeat')"
               class="icon"
             />
           </button>
@@ -171,7 +155,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue"
+import { computed, onMounted, onUnmounted } from "vue"
+import { useI18n } from "vue-i18n"
 import { usePlayerStore } from "../store/player.js"
 import {
   Previous,
@@ -183,7 +168,6 @@ import {
   Shuffle,
   Repeat,
   RepeatOne,
-  Playlist,
   X,
 } from "../assets/icons/icons"
 import {
@@ -192,17 +176,23 @@ import {
   useProgressBar,
   usePlaybackControls,
   getVolumeIcon,
-  getStarStyle,
 } from "../utils/playerUtils.js"
+import {
+  isMiniPlayerActive,
+  enterMiniPlayer,
+  exitMiniPlayer,
+} from "../utils/miniPlayerState.js"
+import defaultCover from "../assets/images/default-cover.svg"
 
+const { t } = useI18n()
 const player = usePlayerStore()
-const showMiniPlayer = ref(false)
-let resizingFromCode = false
-let resizeTimeout = null
-let isMiniActive = false
 
 const currentIndex = computed(() => player.currentIndex)
 const queueLength = computed(() => player.queue.length)
+
+const backdropSrc = computed(
+  () => player.currentTrack?.coverDataUrl || defaultCover
+)
 
 // Use from utils
 const { volume, onVolumeChange, toggleMute } = useVolumeControl(player)
@@ -221,7 +211,12 @@ const volumeIconComponent = computed(() =>
   getVolumeIcon(volume.value, { Volume, VolumeMute })
 )
 
-// Check window size
+// Auto-activate mini mode when the window gets small, as a fallback to the
+// manual toggle button in PlayerBar.vue. Both paths route through the same
+// shared enterMiniPlayer()/exitMiniPlayer() helpers so state never desyncs.
+let resizingFromCode = false
+let resizeTimeout = null
+
 function checkWindowSize() {
   if (resizingFromCode) return
 
@@ -233,43 +228,26 @@ function checkWindowSize() {
     const miniThresholdW = 600
     const miniThresholdH = 700
 
-    // Check if either width or height crosses threshold
     const shouldActivateMini = width < miniThresholdW || height < miniThresholdH
     const shouldDeactivateMini =
       width >= miniThresholdW && height >= miniThresholdH
 
-    if (!isMiniActive && shouldActivateMini) {
-      isMiniActive = true
+    if (!isMiniPlayerActive.value && shouldActivateMini) {
       resizingFromCode = true
-      showMiniPlayer.value = true
-      window.api.enableMiniPlayer?.()
+      enterMiniPlayer()
       setTimeout(() => (resizingFromCode = false), 600)
-    } else if (isMiniActive && shouldDeactivateMini) {
+    } else if (isMiniPlayerActive.value && shouldDeactivateMini) {
       // Only deactivate if window is significantly larger to prevent bouncing
       const hasSignificantMargin =
         width > miniThresholdW + 50 && height > miniThresholdH + 50
 
       if (hasSignificantMargin) {
-        isMiniActive = false
         resizingFromCode = true
-        showMiniPlayer.value = false
-        window.api.restoreWindowSize?.()
+        exitMiniPlayer()
         setTimeout(() => (resizingFromCode = false), 600)
       }
     }
   }, 250)
-}
-
-function exitMiniPlayer() {
-  isMiniActive = false
-  window.api.restoreWindowSize?.()
-  showMiniPlayer.value = false
-}
-
-function closeMiniPlayer() {
-  isMiniActive = false
-  showMiniPlayer.value = false
-  window.api.restoreWindowSize?.()
 }
 
 onMounted(() => {
@@ -291,7 +269,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: var(--bg-color);
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -300,50 +278,28 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* Falling Stars */
-.stars-container {
+.mini-backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  pointer-events: none;
+  object-fit: cover;
+  filter: blur(40px) saturate(1.4);
+  transform: scale(1.2);
 }
 
-.star {
+.mini-backdrop-tint {
   position: absolute;
-  top: -10px;
-  background: white;
-  border-radius: 50%;
-  opacity: 0;
-  animation: fall linear infinite;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
-}
-
-@keyframes fall {
-  0% {
-    top: -10px;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    top: 100%;
-    opacity: 0;
-  }
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-color) 60%, transparent);
 }
 
 .mini-player {
   width: 100%;
-  max-width: 400px;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.85rem;
   animation: scaleIn 0.3s ease;
   position: relative;
   z-index: 1;
@@ -365,11 +321,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0.5rem;
+  padding: 0 0.25rem;
 }
 
 .track-count {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--muted-text);
   font-weight: 500;
 }
@@ -379,7 +335,7 @@ onUnmounted(() => {
   border: none;
   color: var(--text-color);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.4rem;
   border-radius: 50%;
   transition: all 0.2s ease;
   display: flex;
@@ -390,10 +346,6 @@ onUnmounted(() => {
 .icon-btn:hover {
   background: var(--hover-bg);
   color: var(--accent);
-}
-
-.icon-btn i {
-  font-size: 1rem;
 }
 
 .toggle-shuffle img {
@@ -412,42 +364,14 @@ onUnmounted(() => {
 .album-art-container {
   display: flex;
   justify-content: center;
-  padding: 1rem;
 }
 
 .album-art {
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
+  width: 240px;
+  height: 240px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.album-art::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 50px;
-  height: 50px;
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.album-art.spinning {
-  animation: spin 15s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .album-art img {
@@ -459,30 +383,30 @@ onUnmounted(() => {
 /* Track Info */
 .track-info {
   text-align: center;
-  padding: 0 1rem;
+  padding: 0 0.5rem;
 }
 
 .track-title {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text-color);
-  margin: 0 0 0.5rem 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.track-artist {
-  font-size: 1rem;
-  color: var(--muted-text);
   margin: 0 0 0.25rem 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.track-album {
+.track-artist {
   font-size: 0.9rem;
+  color: var(--muted-text);
+  margin: 0 0 0.2rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-album {
+  font-size: 0.8rem;
   color: var(--muted-text);
   opacity: 0.7;
   margin: 0;
@@ -493,30 +417,30 @@ onUnmounted(() => {
 
 /* Progress Section */
 .progress-section {
-  padding: 0 1rem;
+  padding: 0 0.5rem;
 }
 
 .progress-bar {
   position: relative;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  height: 3px;
+  background: rgba(128, 128, 128, 0.25);
+  border-radius: 2px;
   cursor: pointer;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.1s linear;
 }
 
 .progress-handle {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   background: white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -560,7 +484,7 @@ onUnmounted(() => {
 .time-info {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--muted-text);
 }
 
@@ -569,8 +493,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 0 1rem;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
 }
 
 .control-btn {
@@ -578,7 +502,7 @@ onUnmounted(() => {
   border: none;
   color: var(--text-color);
   cursor: pointer;
-  padding: 0.75rem;
+  padding: 0.6rem;
   border-radius: 50%;
   transition: all 0.2s ease;
   display: flex;
@@ -601,44 +525,29 @@ onUnmounted(() => {
   color: var(--accent);
 }
 
-.control-btn i {
-  font-size: 1.2rem;
-}
-
-.play-btn {
-  transform: scale(1.2);
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
-}
-
 .play-btn:hover {
-  transform: scale(1.3);
-  filter: drop-shadow(0 0 5px white);
-}
-
-.play-btn i {
-  font-size: 1.5rem;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 5px var(--accent));
 }
 
 /* Volume */
 .volume-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0 1rem;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
 }
 
 .volume-slider {
   flex: 1;
-  height: 4px;
+  height: 3px;
   border-radius: 2px;
   background: linear-gradient(
     to right,
     var(--accent) 0%,
     var(--accent) var(--volume-progress, 50%),
-    rgba(255, 255, 255, 0.1) var(--volume-progress, 50%),
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(128, 128, 128, 0.25) var(--volume-progress, 50%),
+    rgba(128, 128, 128, 0.25) 100%
   );
   outline: none;
   -webkit-appearance: none;
@@ -649,8 +558,8 @@ onUnmounted(() => {
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
@@ -663,8 +572,8 @@ onUnmounted(() => {
 }
 
 .volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
@@ -700,8 +609,8 @@ onUnmounted(() => {
 }
 
 .icon.large {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
 }
 
 .control-btn:hover .icon,
@@ -713,16 +622,16 @@ onUnmounted(() => {
 /* Responsive */
 @media (max-width: 400px) {
   .album-art {
-    width: 220px;
-    height: 220px;
+    width: 200px;
+    height: 200px;
   }
 
   .track-title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
 
   .track-artist {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 }
 </style>

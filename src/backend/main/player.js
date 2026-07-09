@@ -62,10 +62,10 @@ export function registerPlayerHandlers(mainWindow, db) {
       win.setResizable(true)
 
       // Remove size constraints
-      const normalWidth = 1200
-      const normalHeight = 900
-      const minWidth = 800
-      const minHeight = 600
+      const normalWidth = 1280
+      const normalHeight = 700
+      const minWidth = 350
+      const minHeight = 634
 
       win.setMinimumSize(minWidth, minHeight)
       win.setMaximumSize(0, 0) // remove maximum size limit

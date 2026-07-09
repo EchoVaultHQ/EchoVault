@@ -249,5 +249,17 @@
 
   "enhance": {
     "enhanceToFlac": "Enhance to FLAC (AI)"
+  },
+
+  "miniPlayer": {
+    "toggle": "Toggle Mini Player",
+    "close": "Close",
+    "previous": "Previous",
+    "playPause": "Play/Pause",
+    "next": "Next",
+    "repeat": "Repeat",
+    "shuffleOn": "Shuffle: On",
+    "shuffleOff": "Shuffle: Off",
+    "trackCount": "{current} of {total}"
   }
 }

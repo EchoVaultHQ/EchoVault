@@ -248,11 +248,27 @@ export const usePlayerStore = defineStore("player", {
         this.isPlaying = true
 
         // Handle track end
-        audioEl.onended = () => {
+        audioEl.onended = async () => {
           window.api.info("Track ended")
 
-          // Try to play next track
-          const hasNext = this.playNext()
+          if (this.repeatMode === "one") {
+            audioEl.currentTime = 0
+            await audioEl.play()
+            return
+          }
+
+          let hasNext = await this.playNext()
+
+          // Repeat-all: wrap back to the start of the queue instead of stopping
+          if (!hasNext && this.repeatMode === "all" && this.queue.length > 0) {
+            const order = this.shuffleEnabled ? this.shuffleOrder : null
+            this.currentIndex = 0
+            const firstTrack = order?.length
+              ? this.queue[order[0]]
+              : this.queue[0]
+            await this.setTrack(firstTrack, false)
+            hasNext = true
+          }
 
           // Only set to false if no next track
           if (!hasNext) {

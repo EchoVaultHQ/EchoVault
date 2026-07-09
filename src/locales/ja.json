@@ -233,5 +233,17 @@
 
   "enhance": {
     "enhanceToFlac": "FLAC に高音質化 (AI)"
+  },
+
+  "miniPlayer": {
+    "toggle": "ミニプレーヤーを切り替え",
+    "close": "閉じる",
+    "previous": "前へ",
+    "playPause": "再生・一時停止",
+    "next": "次へ",
+    "repeat": "リピート",
+    "shuffleOn": "シャッフル: オン",
+    "shuffleOff": "シャッフル: オフ",
+    "trackCount": "{total} 曲中 {current} 曲目"
   }
 }

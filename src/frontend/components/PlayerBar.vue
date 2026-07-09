@@ -75,6 +75,17 @@
     <div class="right-section">
       <div class="track-utils">
         <button
+          @click="toggleMiniPlayerMode"
+          class="icon-btn"
+          :title="t('miniPlayer.toggle')"
+        >
+          <img
+            :src="isMiniPlayerActive ? Fullscreen : FullscreenExit"
+            class="playbar-icon-class"
+            :alt="t('miniPlayer.toggle')"
+          />
+        </button>
+        <button
           @click="togglePlayListQueueView"
           class="icon-btn"
           :title="`Show Queue`"
@@ -175,6 +186,8 @@ import {
   Playlist,
   DesktopLyrics,
   Settings,
+  Fullscreen,
+  FullscreenExit,
 } from "../assets/icons/icons"
 
 import {
@@ -186,6 +199,11 @@ import {
   getVolumeIcon,
 } from "../utils/playerUtils.js"
 import { useI18n } from "vue-i18n"
+import {
+  isMiniPlayerActive,
+  enterMiniPlayer,
+  exitMiniPlayer,
+} from "../utils/miniPlayerState.js"
 
 const { t } = useI18n()
 const emit = defineEmits([
@@ -233,6 +251,14 @@ const toggleImmersiveMode = () => {
 
 const openEqualizer = () => {
   emit("open-equalizer")
+}
+
+const toggleMiniPlayerMode = () => {
+  if (isMiniPlayerActive.value) {
+    exitMiniPlayer()
+  } else {
+    enterMiniPlayer()
+  }
 }
 
 const openArtistFromPlayer = () => {
