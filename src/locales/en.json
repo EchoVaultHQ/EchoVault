@@ -262,13 +262,23 @@
 
   "miniPlayer": {
     "toggle": "Toggle Mini Player",
-    "close": "Close",
+    "close": "Exit Mini Player",
+    "minimize": "Minimize",
+    "closeWindow": "Close",
     "previous": "Previous",
     "playPause": "Play/Pause",
     "next": "Next",
     "repeat": "Repeat",
     "shuffleOn": "Shuffle: On",
     "shuffleOff": "Shuffle: Off",
+    "volume": "Volume",
+    "more": "More",
+    "lyrics": "Lyrics",
+    "queue": "Queue",
+    "upNext": "Up Next",
+    "clear": "Clear",
+    "like": "Like",
+    "unlike": "Unlike",
     "trackCount": "{current} of {total}"
   }
 }

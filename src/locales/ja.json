@@ -248,13 +248,23 @@
 
   "miniPlayer": {
     "toggle": "ミニプレーヤーを切り替え",
-    "close": "閉じる",
+    "close": "ミニプレーヤーを終了",
+    "minimize": "最小化",
+    "closeWindow": "閉じる",
     "previous": "前へ",
     "playPause": "再生・一時停止",
     "next": "次へ",
     "repeat": "リピート",
     "shuffleOn": "シャッフル: オン",
     "shuffleOff": "シャッフル: オフ",
+    "volume": "音量",
+    "more": "その他",
+    "lyrics": "歌詞",
+    "queue": "キュー",
+    "upNext": "次に再生",
+    "clear": "クリア",
+    "like": "いいね",
+    "unlike": "いいね解除",
     "trackCount": "{total} 曲中 {current} 曲目"
   }
 }
