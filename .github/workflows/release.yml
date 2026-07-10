@@ -14,7 +14,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [ubuntu-latest, windows-latest, macos-latest]
+                # Pinned (not -latest): ubuntu-latest is now 24.04, which renamed
+                # libasound2 -> libasound2t64; windows-latest ships a VS version
+                # our node-gyp doesn't recognize, breaking better-sqlite3's build.
+                os: [ubuntu-22.04, windows-2022, macos-latest]
 
         runs-on: ${{ matrix.os }}
 
@@ -28,7 +31,7 @@ jobs:
                   node-version-file: ".nvmrc"
 
             - name: Install Linux system dependencies
-              if: matrix.os == 'ubuntu-latest'
+              if: matrix.os == 'ubuntu-22.04'
               run: |
                   sudo apt-get update
                   sudo apt-get install -y \
