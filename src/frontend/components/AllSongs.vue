@@ -18,10 +18,15 @@
       </div>
     </div>
 
+    <TrackSortControls
+      v-model:sortField="sortField"
+      v-model:sortDirection="sortDirection"
+    />
+
     <!-- List View -->
     <TrackList
       v-if="viewMode === 'list'"
-      :tracks="tracks"
+      :tracks="sortedTracks"
       :currentTrack="player.currentTrack"
       :formatDuration="formatDuration"
       :playlists="playlists"
@@ -33,7 +38,7 @@
     <!-- Grid View -->
     <TrackGrid
       v-else
-      :tracks="tracks"
+      :tracks="sortedTracks"
       :currentTrack="player.currentTrack"
       @select="playCurrentTrack"
     />
@@ -48,11 +53,17 @@ import { useEnhanceStore } from "../store/enhance.js"
 import { useI18n } from "vue-i18n"
 import TrackList from "./TrackList.vue"
 import TrackGrid from "./TrackGrid.vue"
+import TrackSortControls from "./TrackSortControls.vue"
+import { useTrackSort } from "../utils/useTrackSort.js"
 
 const { t } = useI18n()
 const tracks = ref([])
 const playlists = ref([])
 const viewMode = ref("list")
+const { sortField, sortDirection, sortedTracks } = useTrackSort(
+  tracks,
+  "echovault-sort-all-songs"
+)
 
 const search = useSearchStore()
 const player = usePlayerStore()
@@ -152,7 +163,7 @@ async function formatTracks(list) {
 function playCurrentTrack(track) {
   if (player.queueSource !== "all") {
     player.clearQueue()
-    player.queue = tracks.value.map((t) => ({ ...t }))
+    player.queue = sortedTracks.value.map((t) => ({ ...t }))
     player.queueSource = "all"
   }
 
