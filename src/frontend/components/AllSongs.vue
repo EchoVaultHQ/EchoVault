@@ -114,7 +114,7 @@ async function loadTracks() {
 
   if (Object.keys(player.currentTrack).length === 0) {
     player.clearQueue()
-    player.queue = structuredClone(withCovers)
+    player.queue = structuredClone(sortedTracks.value)
     player.currentIndex = 0
     player.currentTrack = { ...withCovers[0] } || {}
     player.queueSource = "all"
