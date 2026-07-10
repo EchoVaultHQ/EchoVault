@@ -345,7 +345,7 @@ function tickLyricSync() {
   rafHandle = requestAnimationFrame(tickLyricSync)
 }
 
-const WINDOW_RADIUS = 2
+const WINDOW_RADIUS = 4
 const visibleWindow = computed(() => {
   const timestamps = player.lyrics?.timestamps
   const active = activeIndex.value
@@ -632,7 +632,7 @@ onUnmounted(() => {
 }
 
 .lyric-line {
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: var(--muted-text);
   opacity: 0.5;
   transition:
@@ -646,8 +646,20 @@ onUnmounted(() => {
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.lyric-leave-active {
+  position: absolute;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.lyric-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
 .lyric-line.dist-0 {
-  font-size: 1.3rem;
+  font-size: 1.55rem;
   font-weight: 700;
   color: var(--accent);
   opacity: 1;
@@ -655,6 +667,18 @@ onUnmounted(() => {
 
 .lyric-line.dist-1 {
   opacity: 0.75;
+}
+
+.lyric-line.dist-2 {
+  opacity: 0.45;
+}
+
+.lyric-line.dist-3 {
+  opacity: 0.25;
+}
+
+.lyric-line.dist-4 {
+  opacity: 0.12;
 }
 
 .lyric-line.plain {
