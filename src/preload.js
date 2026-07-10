@@ -108,4 +108,12 @@ contextBridge.exposeInMainWorld("api", {
   lastfmSetEnabled: (enabled) => ipcRenderer.invoke("lastfm:set-enabled", enabled),
   lastfmNowPlaying: (track) => ipcRenderer.invoke("lastfm:now-playing", track),
   lastfmScrobble: (track) => ipcRenderer.invoke("lastfm:scrobble", track),
+
+  // app updates
+  onUpdateAvailable: (cb) => {
+    const handler = (_e, data) => cb(data)
+    ipcRenderer.on("update:available", handler)
+    return () => ipcRenderer.removeListener("update:available", handler)
+  },
+  openExternal: (url) => ipcRenderer.invoke("update:open-external", url),
 })

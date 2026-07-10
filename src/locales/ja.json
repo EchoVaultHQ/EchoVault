@@ -279,5 +279,11 @@
     "like": "いいね",
     "unlike": "いいね解除",
     "trackCount": "{total} 曲中 {current} 曲目"
+  },
+
+  "update": {
+    "available": "EchoVault v{version} が利用可能です",
+    "download": "ダウンロード",
+    "dismiss": "閉じる"
   }
 }

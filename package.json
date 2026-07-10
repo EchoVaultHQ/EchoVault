@@ -1,7 +1,7 @@
 {
   "name": "echovault",
   "productName": "EchoVault",
-  "version": "2.2.0-beta",
+  "version": "2.2.1",
   "description": "A modern music player for lossless audio formats",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -25,6 +25,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
+    "@electron-forge/publisher-github": "^7.11.2",
     "@electron/fuses": "^1.8.0",
     "@electron/rebuild": "^4.0.1",
     "@reforged/maker-appimage": "^5.1.0",

@@ -293,5 +293,11 @@
     "like": "Like",
     "unlike": "Unlike",
     "trackCount": "{current} of {total}"
+  },
+
+  "update": {
+    "available": "EchoVault v{version} is available",
+    "download": "Download",
+    "dismiss": "Dismiss"
   }
 }

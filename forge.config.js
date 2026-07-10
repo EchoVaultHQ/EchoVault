@@ -66,6 +66,16 @@ module.exports = {
     //   config: {},
     // },
   ],
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: { owner: "ACS-lessgo", name: "EchoVault" },
+        prerelease: false,
+        draft: true,
+      },
+    },
+  ],
   plugins: [
     {
       name: "@electron-forge/plugin-vite",

@@ -27,6 +27,7 @@
     />
     <MiniPlayer />
     <Toast />
+    <UpdateBanner />
   </div>
 </template>
 
@@ -40,6 +41,7 @@ import Toast from "./components/Toast.vue"
 import MiniPlayer from "./components/MiniPlayer.vue"
 import Setting from "./components/Setting.vue"
 import ImmersiveMode from "./components/ImmersiveMode.vue"
+import UpdateBanner from "./components/UpdateBanner.vue"
 
 const showQueue = ref(false)
 const showSettingMenu = ref(false)
