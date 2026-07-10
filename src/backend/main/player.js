@@ -39,7 +39,7 @@ export function registerPlayerHandlers(mainWindow, db) {
 
       // Set fixed mini player size
       const miniWidth = 350
-      const miniHeight = 650
+      const miniHeight = 500
 
       win.setMinimumSize(miniWidth, miniHeight)
       win.setMaximumSize(miniWidth, miniHeight)
