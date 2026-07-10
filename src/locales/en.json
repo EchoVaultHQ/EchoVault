@@ -17,6 +17,13 @@
 
   "home": {
     "welcome": "Welcome to {appName}",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "mostPlayed": "Most Played",
+    "yourPlaylists": "Your Playlists",
     "import": {
       "heading": "Import Your Music",
       "addFolder": "Add Folder"
@@ -24,6 +31,10 @@
     "yourCollection": "Your Music Collection",
     "rescan": "Rescan Library",
     "emptyCollection": "No music found. Add a folder to get started."
+  },
+
+  "library": {
+    "folderManagement": "Manage Folders"
   },
 
   "table": {
@@ -54,7 +65,7 @@
     "home": "Home",
     "allSongs": "All Songs",
     "artists": "Artists",
-    "library": "Library Info",
+    "library": "Library",
     "playlists": "Playlists",
     "section": {
       "app": "EchoVault",

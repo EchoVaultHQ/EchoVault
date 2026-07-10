@@ -125,7 +125,7 @@
         <TrackList
           :tracks="sortedTracks"
           :currentTrack="player.currentTrack"
-          :formatDuration="formatDuration"
+          :formatDuration="formatTime"
           :playlists="playlists"
           :currentPlaylistId="
             selectedPlaylist !== 'liked' ? selectedPlaylist : null
@@ -180,6 +180,7 @@ import { usePlaylistsStore } from "../store/playlists.js"
 import TrackList from "./TrackList.vue"
 import TrackSortControls from "./TrackSortControls.vue"
 import { useTrackSort } from "../utils/useTrackSort.js"
+import { formatTime } from "../utils/playerUtils.js"
 import { useI18n } from "vue-i18n"
 
 const { t } = useI18n()
@@ -364,21 +365,6 @@ function shuffleAndPlay() {
   if (!player.shuffleEnabled) player.toggleShuffle()
   const randomIndex = Math.floor(Math.random() * sortedTracks.value.length)
   playTrack(sortedTracks.value[randomIndex])
-}
-
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  const minLabel = mins === 1 ? "min" : "mins"
-  const secLabel = secs === 1 ? "sec" : "secs"
-
-  if (mins > 0 && secs > 0) {
-    return `${mins} ${minLabel} ${secs} ${secLabel}`
-  } else if (mins > 0) {
-    return `${mins} ${minLabel}`
-  } else {
-    return `${secs} ${secLabel}`
-  }
 }
 
 // Watch for dialog show to focus input

@@ -28,7 +28,7 @@
       v-if="viewMode === 'list'"
       :tracks="sortedTracks"
       :currentTrack="player.currentTrack"
-      :formatDuration="formatDuration"
+      :formatDuration="formatTime"
       :playlists="playlists"
       :currentPlaylistId="null"
       @select="playCurrentTrack"
@@ -55,6 +55,7 @@ import TrackList from "./TrackList.vue"
 import TrackGrid from "./TrackGrid.vue"
 import TrackSortControls from "./TrackSortControls.vue"
 import { useTrackSort } from "../utils/useTrackSort.js"
+import { formatTime } from "../utils/playerUtils.js"
 
 const { t } = useI18n()
 const tracks = ref([])
@@ -123,21 +124,6 @@ async function loadTracks() {
   await nextTick()
 }
 
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-
-  const minLabel = mins === 1 ? "min" : "mins"
-  const secLabel = secs === 1 ? "sec" : "secs"
-
-  if (mins > 0 && secs > 0) {
-    return `${mins} ${minLabel} ${secs} ${secLabel}`
-  } else if (mins > 0) {
-    return `${mins} ${minLabel}`
-  } else {
-    return `${secs} ${secLabel}`
-  }
-}
 
 onMounted(async () => {
   await loadTracks()

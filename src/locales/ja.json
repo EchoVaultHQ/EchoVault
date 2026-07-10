@@ -17,6 +17,13 @@
 
   "home": {
     "welcome": "{appName} へようこそ",
+    "greeting": {
+      "morning": "おはようございます",
+      "afternoon": "こんにちは",
+      "evening": "こんばんは"
+    },
+    "mostPlayed": "よく再生される曲",
+    "yourPlaylists": "あなたのプレイリスト",
     "import": {
       "heading": "音楽をインポート",
       "addFolder": "フォルダを追加"
@@ -24,6 +31,10 @@
     "yourCollection": "あなたの音楽コレクション",
     "rescan": "ライブラリを再スキャン",
     "emptyCollection": "音楽が見つかりません。まずフォルダを追加してください。"
+  },
+
+  "library": {
+    "folderManagement": "フォルダを管理"
   },
 
   "table": {
@@ -54,7 +65,7 @@
     "home": "ホーム",
     "allSongs": "すべての曲",
     "artists": "アーティスト",
-    "library": "ライブラリ情報",
+    "library": "ライブラリ",
     "playlists": "プレイリスト",
     "section": {
       "app": "EchoVault",

@@ -4,40 +4,31 @@
       <thead>
         <tr>
           <th class="title-col">Title</th>
+          <th class="artist-col">Artist</th>
           <th class="album-col">Album</th>
           <th class="duration-col">Duration</th>
         </tr>
       </thead>
 
       <tbody>
-        <tr
-          v-for="track in tracks"
-          :key="track.id"
-          class="track-row"
-          :class="{ playing: currentTrack?.file_path === track.file_path }"
-          @click="$emit('select', track)"
-        >
+        <tr v-for="track in tracks" :key="track.id" class="track-row"
+          :class="{ playing: currentTrack?.file_path === track.file_path }" @click="$emit('select', track)">
           <!-- Title + Cover -->
           <td class="title-col">
             <div class="track-info">
-              <img
-                v-if="track.coverDataUrl"
-                :src="track.coverDataUrl"
-                class="track-cover"
-                :alt="track.title"
-              />
-              <img
-                v-else
-                src="../assets/images/default-cover.svg"
-                class="track-cover"
-                :alt="track.title"
-              />
-              <div class="track-details">
-                <div class="track-title">{{ track.title }}</div>
-                <div class="track-artist">{{ track.artist }}</div>
+              <div class="cover-wrapper">
+                <img v-if="track.coverDataUrl" :src="track.coverDataUrl" class="track-cover" :alt="track.title" />
+                <img v-else src="../assets/images/default-cover.svg" class="track-cover" :alt="track.title" />
+                <div v-if="currentTrack?.file_path === track.file_path" class="cover-playing-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
               </div>
+              <div class="track-title">{{ track.title }}</div>
             </div>
           </td>
+
+          <!-- Artist -->
+          <td class="artist-col">{{ track.artist }}</td>
 
           <!-- Album -->
           <td class="album-col">{{ track.album }}</td>
@@ -45,40 +36,34 @@
           <!-- Duration + 3 Dots Button -->
           <td class="duration-col">
             <div class="duration-wrapper">
-              <span v-if="enhanceStore.isEnhancing(track.id)" class="enhance-progress">
-                {{ enhanceLabel(track.id) }}
+              <span class="duration-value">
+                <span class="liked-badge-slot">
+                  <span v-if="track.isLiked" class="liked-badge" :title="t('miniPlayer.like')">
+                    <i class="fa-solid fa-star"></i>
+                  </span>
+                </span>
+                <span v-if="enhanceStore.isEnhancing(track.id)" class="enhance-progress">
+                  {{ enhanceLabel(track.id) }}
+                </span>
+                <span v-else class="duration-text">{{ formatDuration(track.duration) }}</span>
               </span>
-              <span v-else>{{ formatDuration(track.duration) }}</span>
 
-              <button
-                class="more-btn"
-                @click.stop="toggleMenu(track.id, $event)"
-              >
-                <i class="fa-solid fa-ellipsis-vertical"></i>
+              <button class="more-btn" @click.stop="toggleMenu(track.id, $event)">
+                <i class="fa-solid fa-ellipsis"></i>
               </button>
             </div>
 
             <!-- DROPDOWN MENU -->
-            <div
-              v-if="openMenuId === track.id"
-              class="dropdown-menu"
-              :style="{ top: menuPos.y + 'px', left: menuPos.x + 'px' }"
-            >
+            <div v-if="openMenuId === track.id" class="dropdown-menu"
+              :style="{ top: menuPos.y + 'px', left: menuPos.x + 'px' }">
               <!-- Remove from playlist -->
-              <div
-                v-if="currentPlaylistId"
-                class="dropdown-item danger"
-                @click.stop="removeFromPlaylist(track)"
-              >
+              <div v-if="currentPlaylistId" class="dropdown-item danger" @click.stop="removeFromPlaylist(track)">
                 Remove from this playlist
               </div>
 
               <!-- Enhance to FLAC (AI) -->
-              <div
-                class="dropdown-item"
-                :class="{ disabled: enhanceStore.isEnhancing(track.id) }"
-                @click.stop="enhanceTrack(track)"
-              >
+              <div class="dropdown-item" :class="{ disabled: enhanceStore.isEnhancing(track.id) }"
+                @click.stop="enhanceTrack(track)">
                 {{ $t("enhance.enhanceToFlac") }}
               </div>
 
@@ -90,19 +75,12 @@
                 </svg>
 
                 <div class="sub-menu">
-                  <div
-                    v-for="p in availablePlaylists"
-                    :key="p.id"
-                    class="dropdown-item"
-                    @click.stop="addTrackToPlaylist(track, p.id)"
-                  >
+                  <div v-for="p in availablePlaylists" :key="p.id" class="dropdown-item"
+                    @click.stop="addTrackToPlaylist(track, p.id)">
                     {{ p.name }}
                   </div>
 
-                  <div
-                    v-if="availablePlaylists.length === 0"
-                    class="dropdown-item disabled"
-                  >
+                  <div v-if="availablePlaylists.length === 0" class="dropdown-item disabled">
                     No playlists found
                   </div>
                 </div>
@@ -117,8 +95,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue"
+import { useI18n } from "vue-i18n"
 import { useEnhanceStore } from "../store/enhance.js"
 
+const { t } = useI18n()
 const enhanceStore = useEnhanceStore()
 
 const props = defineProps({
@@ -222,20 +202,25 @@ onUnmounted(() => {
 /* Table */
 .track-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0 4px;
 }
 
 .track-table th {
   text-align: left;
-  padding: 12px 16px;
+  padding: 10px 12px;
   color: var(--muted-text);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .track-table td {
-  padding: 14px 16px;
+  padding: 10px 12px;
+  font-size: 14px;
+  vertical-align: middle;
 }
 
 .track-table tbody td:first-child {
@@ -248,15 +233,31 @@ onUnmounted(() => {
 
 /* Columns */
 .title-col {
-  width: 45%;
-}
-
-.album-col {
   width: 35%;
 }
 
+.artist-col {
+  width: 22%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.album-col {
+  width: 18%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--muted-text);
+  font-size: 13px;
+}
+
 .duration-col {
-  width: 120px;
+  width: 90px;
   position: relative;
   white-space: nowrap;
 }
@@ -275,6 +276,39 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.duration-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.liked-badge-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.liked-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--hover-bg);
+  color: var(--accent);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.duration-text {
+  min-width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Track Row */
 .track-row {
   cursor: pointer;
@@ -288,35 +322,72 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.cover-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
 .track-cover {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   object-fit: cover;
   border-radius: var(--radius-sm);
 }
 
+.cover-playing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 14px;
+}
+
 .track-title {
-  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-color);
 }
 
-.track-artist {
-  font-size: 13px;
+.artist-col {
+  font-size: 12px;
   color: var(--accent);
 }
 
 /* === 3 DOTS BUTTON === */
 .more-btn {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
+
+  margin-left: 2px;
+
   cursor: pointer;
-  padding: 4px;
-  margin-left: 10px;
-  opacity: 0.6;
-  transition:
-    opacity 0.2s,
-    background-color 0.2s;
+
+  opacity: .55;
+
+  flex-shrink: 0;
+
+  transition: .2s;
 }
 
 .more-btn:hover {
@@ -405,8 +476,14 @@ onUnmounted(() => {
 }
 
 .track-row.playing td {
-  background-color: var(--hover-bg);
+  background-color: color-mix(in srgb, var(--accent) 35%, var(--side-nav-bg));
+  color: var(--text-color);
   transition: background-color 0.3s;
+}
+
+.track-row.playing .artist-col {
+  color: var(--text-color);
+  opacity: 0.85;
 }
 
 .track-row.playing td:first-child {
