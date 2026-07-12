@@ -1,6 +1,7 @@
 import { ipcMain, shell, safeStorage, app } from "electron"
 import fs from "fs"
 import path from "path"
+import log from "../../logger.js"
 import {
   getToken,
   buildAuthUrl,
@@ -140,7 +141,10 @@ export function registerLastfmHandlers() {
   ipcMain.handle("lastfm:now-playing", async (event, track) => {
     const auth = readAuth()
     if (!auth?.sessionKey || !auth.scrobblingEnabled || !track?.artist || !track?.title) return
-    await updateNowPlaying(auth, auth.sessionKey, track)
+    const result = await updateNowPlaying(auth, auth.sessionKey, track)
+    if (!result.ok) {
+      log.error("lastfm :: now-playing update failed:", result.error)
+    }
   })
 
   ipcMain.handle("lastfm:scrobble", async (event, track) => {
@@ -152,6 +156,7 @@ export function registerLastfmHandlers() {
     const timestamp = Math.floor(Date.now() / 1000)
     const result = await scrobble(auth, auth.sessionKey, track, timestamp)
     if (!result.ok) {
+      log.error("lastfm :: scrobble failed:", result.error)
       enqueueFailedScrobble(getQueuePath(), auth, auth.sessionKey, track, timestamp)
     }
   })

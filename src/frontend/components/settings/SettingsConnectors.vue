@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { Cloud } from "@lucide/vue"
 import { Fm } from "../../assets/icons/icons.js"
@@ -73,6 +73,8 @@ const { t } = useI18n()
 const lastfmStore = useLastfmStore()
 const lastfmApiKey = ref("")
 const lastfmApiSecret = ref("")
+
+onMounted(() => lastfmStore.fetchStatus())
 
 const fetchLyricsOnline = ref(localStorage.getItem("fetchLyricsOnline") !== "false")
 function toggleFetchLyricsOnline(val) {
