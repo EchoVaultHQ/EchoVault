@@ -13,12 +13,12 @@
             >({{ t('queue.shuffled') }})</small
           >
         </h3>
-        <button class="close-btn" @click="closeQueue">
-          <img :src="X" alt="x" class="playbar-icon-class" />
+        <button class="close-btn icon-btn" @click="closeQueue" title="Close">
+          <X :size="18" />
         </button>
       </div>
 
-      <div class="queue-list">
+      <div v-if="displayedQueue.length" class="queue-list">
         <div
           v-for="(track, index) in displayedQueue"
           :key="track.id || index"
@@ -28,12 +28,24 @@
           }"
           @click="playSongFromQueue(track)"
         >
-          <div class="queue-info">
-            <span class="index">{{ index + 1 }}</span>
-            <div class="track-details">
-              <div class="track-title">{{ track.title }}</div>
-              <div class="track-artist">{{ track.artist }}</div>
-            </div>
+          <span class="index">{{ index + 1 }}</span>
+
+          <img
+            v-if="track.coverDataUrl"
+            :src="track.coverDataUrl"
+            alt="Album Art"
+            class="queue-thumb"
+          />
+          <img
+            v-else
+            src="../assets/images/default-cover.svg"
+            alt="Album Art"
+            class="queue-thumb"
+          />
+
+          <div class="track-details">
+            <div class="track-title">{{ track.title }}</div>
+            <div class="track-artist">{{ track.artist }}</div>
           </div>
 
           <span class="duration">{{ formatTime(track.duration) }}</span>
@@ -43,9 +55,13 @@
             title="Remove from queue"
             @click.stop="removeFromQueue(track)"
           >
-            ×
+            <X :size="14" />
           </button>
         </div>
+      </div>
+      <div v-else class="queue-empty">
+        <ListMusic :size="28" />
+        <p>{{ t('queue.empty') }}</p>
       </div>
     </div>
   </transition>
@@ -54,7 +70,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { usePlayerStore } from "../store/player.js"
-import { X } from "../assets/icons/icons"
+import { X, ListMusic } from "@lucide/vue"
 import { formatTime, useQueueManagement } from "../utils/playerUtils.js"
 import { useI18n } from 'vue-i18n'
 
@@ -194,27 +210,24 @@ watch(
 }
 
 /* Queue header buttons */
-.close-btn {
+.icon-btn {
   background: transparent;
   border: none;
+  border-radius: 8px;
+  padding: 6px;
   color: var(--muted-text);
-  font-size: 1.1rem;
   cursor: pointer;
-  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.close-btn:hover {
+.icon-btn:hover {
+  background-color: var(--hover-bg);
   color: var(--accent);
-}
-
-.playbar-icon-class {
-  width: 18px;
-  height: 18px;
-  filter: invert(100%) brightness(200%);
-}
-
-:root[data-theme="light"] .playbar-icon-class {
-  filter: invert(0%) brightness(0%);
 }
 
 /* Queue list */
@@ -227,21 +240,12 @@ watch(
 .queue-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background 0.2s ease;
   position: relative;
-  background-color: var(--side-nav-bg);
   border-bottom: 1px solid var(--border-color);
-}
-
-.queue-item:nth-child(odd) {
-  background-color: var(--row-alt-bg);
-}
-
-.queue-item:nth-child(even) {
-  background-color: var(--row-even-bg);
 }
 
 .queue-item:hover {
@@ -249,27 +253,30 @@ watch(
 }
 
 .queue-item.playing {
-  background-color: var(--accent-hover);
-  color: #fff;
+  background: color-mix(in srgb, var(--accent) 35%, var(--side-nav-bg));
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
-/* Queue item content */
-.queue-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-}
-
-.queue-info .index {
-  width: 20px;
+.index {
+  width: 18px;
+  flex-shrink: 0;
   text-align: right;
   color: var(--muted-text);
   font-size: 0.85rem;
 }
 
+.queue-thumb {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 /* Track details inside queue */
 .track-details {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -295,9 +302,9 @@ watch(
 
 /* Duration text alignment */
 .duration {
+  flex-shrink: 0;
   font-size: 0.85rem;
   color: var(--muted-text);
-  margin-left: auto;
   margin-right: 1.5rem;
 }
 
@@ -307,9 +314,11 @@ watch(
   background: transparent;
   border: none;
   color: var(--muted-text);
-  font-size: 1rem;
   position: absolute;
   right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition:
     opacity 0.2s,
     color 0.2s;
@@ -322,6 +331,22 @@ watch(
 
 .remove-btn:hover {
   color: var(--accent);
+}
+
+/* Empty queue state */
+.queue-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted-text);
+}
+
+.queue-empty p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 /* Queue transition animation */
@@ -362,11 +387,6 @@ watch(
 
   .queue-list {
     padding-bottom: 1rem;
-  }
-
-  .close-btn {
-    font-size: 1.4rem;
-    padding: 0.3rem 0.6rem;
   }
 }
 </style>

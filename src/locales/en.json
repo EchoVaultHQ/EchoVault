@@ -92,7 +92,8 @@
 
   "queue": {
     "title": "Play Queue",
-    "shuffled": "Shuffled"
+    "shuffled": "Shuffled",
+    "empty": "Queue is empty"
   },
 
   "nav": {

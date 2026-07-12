@@ -92,7 +92,8 @@
 
   "queue": {
     "title": "再生キュー",
-    "shuffled": "シャッフル"
+    "shuffled": "シャッフル",
+    "empty": "キューは空です"
   },
 
   "nav": {
