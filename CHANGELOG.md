@@ -41,6 +41,15 @@
 
 ## Recent Fixes
 
+- Upgrade: Immersive Mode redesigned to match the reference mockup — new header (collapse, quick equalizer shortcut, exit), like button moved under the track title, queue/more-options controls added to the bottom bar, shuffle and repeat now flank previous/play/next, and the background now bleeds the album art toward the right edge instead of a fully blurred+vignetted fill (9a6d7aa)
+- Added: Esc key exits Immersive Mode (9a6d7aa)
+- Upgrade: Player bar redesigned into a floating rounded pill with an integrated progress bar, crisper icon set, and shuffle/repeat grouped together with previous/play/next (c8691d8)
+- Upgrade: Play Queue panel redesigned — album art thumbnail per row, flat list (removed zebra striping), subtler accent-tinted "now playing" highlight matching the library view, and a proper empty-queue state (630ca8e)
+- Upgrade: song list's "..." menu redesigned with icons and rebuilt around a declarative item list, so adding a future menu action no longer requires new markup (4598498)
+- Added: Like/Unlike a song directly from the song list "..." menu, without it needing to be the currently playing track (4598498)
+- Fixed: liked-song heart and active-shuffle icons rendered as an unreadable dark blob instead of highlighting — a CSS specificity bug was dropping their icon-tint filter (9a6d7aa)
+- Fixed: the "..." dropdown menu in Immersive Mode was clipped to a sliver by the player bar's rounded corners (9a6d7aa)
+- Fixed: saved accent color only applied after opening Settings > Appearance — now applied on launch, so the Play Queue highlight and other accent-colored UI show your chosen color immediately instead of the default purple (9a6d7aa)
 - Added: 10-band graphic equalizer with presets (Flat, Bass/Treble Booster & Reducer, Vocal Booster, Rock, Pop, Jazz, Classical, Electronic, Acoustic) plus manual per-band override, in Settings > Audio
 - Added: loudness normalization toggle ("Normalize volume"), live-adaptive RMS-based gain applied per track
 - Added: quick-access equalizer icon in the player bar, jumps straight to Settings > Audio
@@ -62,4 +71,4 @@
 
 ---
 
-_Last updated: 2026-07-09_
+_Last updated: 2026-07-12_
