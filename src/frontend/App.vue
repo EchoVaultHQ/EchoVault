@@ -45,12 +45,16 @@ import { useUpdateStore } from "./store/update.js"
 import { usePlayerStore } from "./store/player.js"
 import { useShortcutsStore } from "./store/shortcuts.js"
 import { useProfileStore } from "./store/profile.js"
+import { useAccentStore } from "./store/accent.js"
 import { normalizeKeyEvent, isEditableTarget } from "./utils/keyCombo.js"
 
 const updateStore = useUpdateStore()
 const playerStore = usePlayerStore()
 const shortcutsStore = useShortcutsStore()
 const profileStore = useProfileStore()
+// Instantiated for its side effect: applies the saved accent color to the DOM
+// on startup, instead of only when the Appearance settings page is opened.
+useAccentStore()
 const router = useRouter()
 let unsubscribeUpdate = null
 let unsubscribeTrayControl = null

@@ -397,7 +397,11 @@ const onLikeFromMenu = () => {
 }
 
 .icon-btn.active img {
-  filter: brightness(1.3);
+  filter: invert(100%) brightness(260%);
+}
+
+:root[data-theme="light"] .icon-btn.active img {
+  filter: invert(0%) brightness(0%);
 }
 
 .toggle-shuffle img {
@@ -408,8 +412,12 @@ const onLikeFromMenu = () => {
 }
 
 .toggle-shuffle.active img {
-  filter: drop-shadow(0 0 4px var(--accent-hover));
+  filter: invert(100%) brightness(200%) drop-shadow(0 0 4px var(--accent-hover));
   opacity: 1;
+}
+
+:root[data-theme="light"] .toggle-shuffle.active img {
+  filter: invert(0%) brightness(0%) drop-shadow(0 0 4px var(--accent-hover));
 }
 
 .icon-btn .playbar-icon-class {

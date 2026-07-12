@@ -1,170 +1,165 @@
 <template>
-  <!-- === PROGRESS BAR === -->
-  <div
-    class="progress-bar"
-    @click="seek($event)"
-    @mousemove="showHoverTime($event)"
-    @mouseleave="hideHoverTime"
-  >
+  <div class="playerbar-wrapper">
+    <!-- === PROGRESS BAR === -->
     <div
-      class="progress-fill"
-      :style="{ width: `${player.progress * 100}%` }"
-    ></div>
-    <div
-      v-if="hoverTimeVisible"
-      class="progress-cursor-dot"
-      :style="{ left: hoverX + 'px' }"
-    ></div>
-    <div
-      v-if="hoverTimeVisible"
-      class="hover-time"
-      :style="{ left: hoverX + 'px' }"
+      class="progress-bar"
+      @click="seek($event)"
+      @mousemove="showHoverTime($event)"
+      @mouseleave="hideHoverTime"
     >
-      {{ formatTime(hoverTime) }}
-    </div>
-  </div>
-
-  <footer class="player-bar" :style="playerBarStyle">
-    <!-- LEFT: Song Info -->
-    <div class="song-info">
-      <img
-        v-if="player.currentTrack?.coverDataUrl"
-        :src="player.currentTrack.coverDataUrl"
-        alt="Album Art"
-      />
-      <img v-else src="../assets/images/default-cover.svg" alt="Album Art" />
-
-      <div class="song-details">
-        <p>{{ player.currentTrack?.title || t("labels.noTrackSelected") }}</p>
-        <small class="artist-name" @click="openArtistFromPlayer">
-          {{ player.currentTrack?.artist || t("labels.unknownArtist") }}
-        </small>
+      <div
+        class="progress-fill"
+        :style="{ width: `${player.progress * 100}%` }"
+      ></div>
+      <div
+        v-if="hoverTimeVisible"
+        class="progress-cursor-dot"
+        :style="{ left: hoverX + 'px' }"
+      ></div>
+      <div
+        v-if="hoverTimeVisible"
+        class="hover-time"
+        :style="{ left: hoverX + 'px' }"
+      >
+        {{ formatTime(hoverTime) }}
       </div>
     </div>
 
-    <!-- CENTER: Controls -->
-    <div class="controls">
-      <button
-        @click="playPreviousTrack"
-        class="icon-btn"
-        :disabled="!player.hasPrevious"
-        :class="{ disabled: !player.hasPrevious }"
-      >
-        <img class="playbar-icon-class" :src="Previous" alt="Previous" />
-      </button>
-
-      <button @click="togglePlay" class="icon-btn play-btn">
+    <footer class="player-bar" :style="playerBarStyle">
+      <!-- LEFT: Song Info -->
+      <div class="song-info">
         <img
-          class="playbar-icon-class play-icon"
-          :src="isPlaying ? Pause : Play"
-          :alt="isPlaying ? 'Pause' : 'Play'"
+          v-if="player.currentTrack?.coverDataUrl"
+          :src="player.currentTrack.coverDataUrl"
+          alt="Album Art"
         />
-      </button>
+        <img v-else src="../assets/images/default-cover.svg" alt="Album Art" />
 
-      <button
-        @click="playNextTrack"
-        class="icon-btn"
-        :disabled="!player.hasNext"
-        :class="{ disabled: !player.hasNext }"
-      >
-        <img class="playbar-icon-class" :src="Next" alt="Next" />
-      </button>
-    </div>
+        <div class="song-details">
+          <p>{{ player.currentTrack?.title || t("labels.noTrackSelected") }}</p>
+          <small class="artist-name" @click="openArtistFromPlayer">
+            {{ player.currentTrack?.artist || t("labels.unknownArtist") }}
+          </small>
+        </div>
+      </div>
 
-    <!-- RIGHT: Track Utils + Volume -->
-    <div class="right-section">
-      <div class="track-utils">
-        <button
-          @click="toggleMiniPlayerMode"
-          class="icon-btn"
-          :title="t('miniPlayer.toggle')"
-        >
-          <img
-            :src="isMiniPlayerActive ? Fullscreen : FullscreenExit"
-            class="playbar-icon-class"
-            :alt="t('miniPlayer.toggle')"
-          />
-        </button>
-        <button
-          @click="togglePlayListQueueView"
-          class="icon-btn"
-          :title="`Show Queue`"
-        >
-          <img :src="Playlist" class="playbar-icon-class" alt="Playlist" />
-        </button>
-        <button
-          @click="toggleImmersiveMode"
-          class="icon-btn"
-          title="Toggle Immersive Mode"
-        >
-          <img
-            :src="DesktopLyrics"
-            class="playbar-icon-class"
-            alt="DesktopLyrics"
-          />
-        </button>
-        <button
-          @click="openEqualizer"
-          class="icon-btn"
-          :title="t('labels.equalizer')"
-        >
-          <img :src="Settings" class="playbar-icon-class" alt="Equalizer" />
-        </button>
-        <button @click="toggleLikedSong" class="icon-btn" :title="`Like Song`">
-          <img
-            class="playbar-icon-class"
-            :src="player.currentTrack?.isLiked ? HeartSolid : Heart"
-            alt="Heart icon"
-          />
-        </button>
-        <button
-          @click="player.toggleRepeat"
-          class="icon-btn"
-          :class="player.repeatMode"
-          :title="`Repeat: ${player.repeatMode}`"
-        >
-          <img
-            class="playbar-icon-class"
-            :src="player.repeatMode === 'one' ? RepeatOne : Repeat"
-            alt="Repeat icon"
-          />
-        </button>
+      <!-- CENTER: Playback cluster -->
+      <div class="controls">
         <button
           @click="player.toggleShuffle"
           class="icon-btn toggle-shuffle"
           :class="{ active: player.shuffleEnabled }"
           :title="player.shuffleEnabled ? 'Shuffle: On' : 'Shuffle: Off'"
         >
-          <img class="playbar-icon-class" :src="Shuffle" alt="Shuffle icon" />
+          <Shuffle :size="17" />
         </button>
-      </div>
 
-      <div class="volume">
         <button
-          @click="toggleMute"
+          @click="playPreviousTrack"
           class="icon-btn"
-          :title="`Volume: ${volume}%`"
+          :disabled="!player.hasPrevious"
+          :class="{ disabled: !player.hasPrevious }"
         >
-          <img
-            class="playbar-icon-class"
-            :src="currentVolumeIcon"
-            alt="Volume icon"
+          <SkipBack :size="18" />
+        </button>
+
+        <button @click="togglePlay" class="icon-btn play-btn">
+          <component
+            :is="isPlaying ? Pause : Play"
+            :size="24"
+            fill="currentColor"
           />
         </button>
 
-        <input
-          type="range"
-          min="0"
-          max="100"
-          v-model="volume"
-          @input="onVolumeChange"
-          class="volume-slider"
-          :style="{ '--range-progress': volume + '%' }"
-          :title="`Volume: ${volume}%`"
-        />
+        <button
+          @click="playNextTrack"
+          class="icon-btn"
+          :disabled="!player.hasNext"
+          :class="{ disabled: !player.hasNext }"
+        >
+          <SkipForward :size="18" />
+        </button>
+
+        <button
+          @click="player.toggleRepeat"
+          class="icon-btn"
+          :class="player.repeatMode"
+          :title="`Repeat: ${player.repeatMode}`"
+        >
+          <component
+            :is="player.repeatMode === 'one' ? Repeat1 : Repeat"
+            :size="17"
+          />
+        </button>
       </div>
-    </div>
-  </footer>
+
+      <!-- RIGHT: Utility cluster + Volume -->
+      <div class="right-section">
+        <div class="track-utils">
+          <button
+            @click="toggleMiniPlayerMode"
+            class="icon-btn"
+            :title="t('miniPlayer.toggle')"
+          >
+            <component :is="isMiniPlayerActive ? Minimize2 : Maximize2" :size="17" />
+          </button>
+          <button
+            @click="togglePlayListQueueView"
+            class="icon-btn"
+            :title="`Show Queue`"
+          >
+            <ListMusic :size="17" />
+          </button>
+          <button
+            @click="toggleImmersiveMode"
+            class="icon-btn"
+            title="Toggle Immersive Mode"
+          >
+            <Cast :size="17" />
+          </button>
+          <button
+            @click="openEqualizer"
+            class="icon-btn"
+            :title="t('labels.equalizer')"
+          >
+            <SlidersHorizontal :size="17" />
+          </button>
+          <button
+            @click="toggleLikedSong"
+            class="icon-btn like-btn"
+            :class="{ 'is-liked': player.currentTrack?.isLiked }"
+            :title="`Like Song`"
+          >
+            <Heart
+              :size="17"
+              :fill="player.currentTrack?.isLiked ? 'currentColor' : 'none'"
+            />
+          </button>
+        </div>
+
+        <div class="volume">
+          <button
+            @click="toggleMute"
+            class="icon-btn"
+            :title="`Volume: ${volume}%`"
+          >
+            <component :is="currentVolumeIcon" :size="17" />
+          </button>
+
+          <input
+            type="range"
+            min="0"
+            max="100"
+            v-model="volume"
+            @input="onVolumeChange"
+            class="volume-slider"
+            :style="{ '--range-progress': volume + '%' }"
+            :title="`Volume: ${volume}%`"
+          />
+        </div>
+      </div>
+    </footer>
+  </div>
 </template>
 
 <script setup>
@@ -173,23 +168,22 @@ import { usePlayerStore } from "../store/player.js"
 import { useRouter } from "vue-router"
 import { extractCoverColor } from "../utils/coverColor.js"
 import {
-  Previous,
-  Next,
-  Play,
-  Volume,
-  VolumeMute,
-  Pause,
-  Heart,
-  HeartSolid,
   Shuffle,
+  SkipBack,
+  SkipForward,
+  Play,
+  Pause,
   Repeat,
-  RepeatOne,
-  Playlist,
-  DesktopLyrics,
-  Settings,
-  Fullscreen,
-  FullscreenExit,
-} from "../assets/icons/icons"
+  Repeat1,
+  Heart,
+  ListMusic,
+  SlidersHorizontal,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
+  Cast,
+} from "@lucide/vue"
 
 import {
   formatTime,
@@ -238,7 +232,7 @@ const { togglePlay, playPreviousTrack, playNextTrack } =
 const { toggleLikedSong } = useTrackLike(player)
 
 const currentVolumeIcon = computed(() =>
-  getVolumeIcon(volume.value, { Volume, VolumeMute })
+  getVolumeIcon(volume.value, { Volume: Volume2, VolumeMute: VolumeX })
 )
 
 const togglePlayListQueueView = () => {
@@ -246,7 +240,6 @@ const togglePlayListQueueView = () => {
 }
 
 const toggleImmersiveMode = () => {
-  console.log("Toggling immersive mode")
   emit("toggle-immersive-mode")
 }
 
@@ -290,14 +283,64 @@ const playerBarStyle = computed(() => {
 <style scoped>
 /* Player bar – includes playback controls, song info, volume */
 
-/* Player bar layout */
+.playerbar-wrapper {
+  padding: 10px 20px 16px;
+  -webkit-app-region: no-drag;
+}
+
+/* Playback progress bar */
+.progress-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border-color);
+  cursor: pointer;
+  margin: 0 10px 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.1s linear;
+}
+
+.progress-cursor-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hover-time {
+  position: absolute;
+  bottom: 110%;
+  background: var(--topbar-bg);
+  color: var(--text-color);
+  font-size: 0.7rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10001;
+}
+
+/* Player bar layout: floating rounded pill */
 .player-bar {
-  height: 80px;
+  height: 76px;
   display: grid;
   grid-template-columns: 1fr auto 1fr; /* Left | Center | Right */
   align-items: center;
   gap: 1rem;
-  padding: 0 1rem;
+  padding: 0 1.25rem;
+  border-radius: 20px;
   background-image: radial-gradient(
     120% 180% at 15% 50%,
     rgba(var(--cover-tint), var(--cover-tint-opacity, 0)),
@@ -306,7 +349,8 @@ const playerBarStyle = computed(() => {
   background-color: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-top: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
   color: var(--text-color);
   overflow: hidden;
 }
@@ -315,18 +359,21 @@ const playerBarStyle = computed(() => {
 .song-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   min-width: 0;
   max-width: 320px;
   overflow: hidden;
+  padding-right: 1rem;
+  border-right: 1px solid var(--border-color);
 }
 
 .song-info img {
   flex-shrink: 0;
-  width: 55px;
-  height: 55px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
   object-fit: cover;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .song-details {
@@ -377,19 +424,19 @@ const playerBarStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .play-btn {
-  transform: scale(1.2);
+  transform: scale(1.15);
   transition:
     transform 0.2s ease,
     filter 0.2s ease;
 }
 
 .play-btn:hover {
-  transform: scale(1.3);
-  filter: drop-shadow(0 0 5px white);
+  transform: scale(1.25);
+  filter: drop-shadow(0 0 8px var(--accent));
 }
 
 /* Right section: utilities and volume */
@@ -397,13 +444,15 @@ const playerBarStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 16px;
 }
 
 .track-utils {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding-right: 1rem;
+  border-right: 1px solid var(--border-color);
 }
 
 .volume {
@@ -416,43 +465,46 @@ const playerBarStyle = computed(() => {
 .icon-btn {
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-color);
+  opacity: 0.75;
   transition:
     background-color 0.2s ease,
-    transform 0.1s ease;
+    transform 0.1s ease,
+    opacity 0.2s ease,
+    color 0.2s ease;
 }
 
 .icon-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(128, 128, 128, 0.15);
   transform: scale(1.05);
+  opacity: 1;
 }
 
 .icon-btn.disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.playbar-icon-class {
-  width: 18px;
-  height: 18px;
-  filter: invert(100%) brightness(200%);
-}
-
-.play-icon {
-  width: 26px;
-  height: 26px;
+/* Active states — shuffle/repeat/like all recolor to the accent */
+.toggle-shuffle.active,
+.icon-btn.all,
+.icon-btn.one,
+.like-btn.is-liked {
+  color: var(--accent);
+  opacity: 1;
 }
 
 /* Volume slider */
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 120px;
+  width: 110px;
   height: 4px;
   border-radius: 4px;
   background: linear-gradient(
@@ -474,89 +526,6 @@ const playerBarStyle = computed(() => {
   border-radius: 50%;
   cursor: pointer;
   transition: background 0.2s ease;
-}
-
-/* Button states */
-.icon-btn.active img {
-  filter: brightness(1.3);
-}
-
-.icon-btn.off img {
-  opacity: 0.6;
-}
-
-.toggle-shuffle img {
-  opacity: 0.7;
-  transition:
-    filter 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.toggle-shuffle.active img {
-  filter: drop-shadow(0 0 4px var(--accent));
-  opacity: 1;
-}
-
-/* Icon theming by theme mode */
-:root[data-theme="dark"] .playbar-icon-class {
-  filter: invert(100%) brightness(200%);
-}
-
-:root[data-theme="light"] .playbar-icon-class {
-  filter: invert(0%) brightness(0%);
-}
-
-/* Hover glow effect */
-:root[data-theme="dark"] .icon-btn:hover img {
-  filter: invert(100%) brightness(200%) drop-shadow(0 0 4px var(--accent-hover));
-}
-
-:root[data-theme="light"] .icon-btn:hover img {
-  filter: invert(0%) brightness(0%) drop-shadow(0 0 3px var(--accent));
-}
-
-/* Playback progress bar */
-.progress-bar {
-  position: fixed;
-  bottom: 80px; /* above player bar */
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: var(--border-color);
-  cursor: pointer;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.1s linear;
-}
-
-.progress-cursor-dot {
-  position: absolute;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  z-index: 2;
-  pointer-events: none;
-}
-
-.hover-time {
-  position: absolute;
-  bottom: 110%;
-  background: var(--topbar-bg);
-  color: var(--text-color);
-  font-size: 0.7rem;
-  padding: 2px 5px;
-  border-radius: 4px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 10001;
 }
 
 .artist-name {
