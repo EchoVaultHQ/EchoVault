@@ -20,6 +20,8 @@
     <ImmersiveMode
       v-if="isImmersiveMode"
       @close-immersive-mode="toggleImmersiveMode"
+      @toggle-queue="toggleQueueFromImmersive"
+      @open-equalizer="openEqualizerFromImmersive"
     />
     <MiniPlayer />
     <Toast />
@@ -143,6 +145,16 @@ const toggleImmersiveMode = () => {
   } else {
     window.api.resetImmersiveMode()
   }
+}
+
+const toggleQueueFromImmersive = () => {
+  toggleImmersiveMode()
+  toggleQueue()
+}
+
+const openEqualizerFromImmersive = () => {
+  toggleImmersiveMode()
+  openEqualizer()
 }
 </script>
 
