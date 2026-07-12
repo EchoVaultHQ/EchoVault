@@ -46,6 +46,23 @@
                   @blur="profileStore.setUsername(usernameInput)"
                   @keyup.enter="profileStore.setUsername(usernameInput)"
                 />
+
+                <div class="avatar-row">
+                  <div class="avatar-preview">
+                    <img v-if="profileStore.avatarUrl" :src="profileStore.avatarUrl" alt="Avatar" />
+                    <i v-else class="fa-solid fa-circle-user"></i>
+                  </div>
+                  <button class="check-updates-button" @click="profileStore.pickAvatar()">
+                    {{ t("settings.profile.chooseImage") }}
+                  </button>
+                  <button
+                    v-if="profileStore.avatarUrl"
+                    class="check-updates-button"
+                    @click="profileStore.clearAvatar()"
+                  >
+                    {{ t("settings.profile.removeImage") }}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -492,6 +509,12 @@ const player = usePlayerStore()
 const updateStore = useUpdateStore()
 const profileStore = useProfileStore()
 const usernameInput = ref(profileStore.username)
+watch(
+  () => profileStore.username,
+  (val) => {
+    usernameInput.value = val
+  }
+)
 const shortcutsStore = useShortcutsStore()
 
 const playbackActions = [
@@ -1161,6 +1184,37 @@ onMounted(() => {
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
   cursor: pointer;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.avatar-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-preview i {
+  font-size: 1.75rem;
+  color: var(--accent);
 }
 
 .check-updates-button:disabled {

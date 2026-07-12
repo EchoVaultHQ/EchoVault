@@ -157,7 +157,9 @@
       "title": "Profile",
       "description": "Personalize your greeting",
       "usernameLabel": "Display Name",
-      "usernamePlaceholder": "Enter your name"
+      "usernamePlaceholder": "Enter your name",
+      "chooseImage": "Choose Image",
+      "removeImage": "Remove"
     },
     "connectors": {
       "title": "Connectors",
