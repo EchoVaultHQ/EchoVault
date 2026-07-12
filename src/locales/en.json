@@ -144,6 +144,7 @@
     "close": "Close",
     "comingSoon": "Coming Soon",
     "tabs": {
+      "profile": "Profile",
       "appearance": "Appearance",
       "language": "Language & Region",
       "audio": "Audio",
@@ -151,6 +152,12 @@
       "connectors": "Connectors",
       "shortcuts": "Shortcuts",
       "about": "About"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Personalize your greeting",
+      "usernameLabel": "Display Name",
+      "usernamePlaceholder": "Enter your name"
     },
     "connectors": {
       "title": "Connectors",

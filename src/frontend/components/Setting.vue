@@ -24,6 +24,31 @@
 
           <!-- Main Content -->
           <div class="settings-main">
+            <!-- Profile Tab -->
+            <div v-if="activeTab === 'profile'" class="tab-content">
+              <h2 class="section-title">{{ t("settings.profile.title") }}</h2>
+              <p class="section-description">
+                {{ t("settings.profile.description") }}
+              </p>
+
+              <div class="setting-group">
+                <div class="setting-label">
+                  <i class="fa-solid fa-user"></i>
+                  <div>
+                    <h3>{{ t("settings.profile.usernameLabel") }}</h3>
+                  </div>
+                </div>
+                <input
+                  class="lastfm-input"
+                  type="text"
+                  :placeholder="t('settings.profile.usernamePlaceholder')"
+                  v-model="usernameInput"
+                  @blur="profileStore.setUsername(usernameInput)"
+                  @keyup.enter="profileStore.setUsername(usernameInput)"
+                />
+              </div>
+            </div>
+
             <!-- Appearance Tab -->
             <div v-if="activeTab === 'appearance'" class="tab-content">
               <h2 class="section-title">
@@ -320,20 +345,38 @@
                 {{ t("settings.shortcuts.description") }}
               </p>
 
-              <div class="setting-group disabled">
+              <div class="setting-group">
                 <div class="setting-label">
                   <i class="fa-solid fa-keyboard"></i>
                   <div>
                     <h3>{{ t("settings.shortcuts.playback.title") }}</h3>
                     <p>{{ t("settings.shortcuts.playback.description") }}</p>
                   </div>
+                  <button class="check-updates-button" @click="shortcutsStore.resetToDefaults()">
+                    {{ t("settings.shortcuts.resetAll") }}
+                  </button>
                 </div>
-                <div class="coming-soon-badge">
-                  {{ t("settings.comingSoon") }}
+
+                <div class="shortcut-row" v-for="actionId in playbackActions" :key="actionId">
+                  <span class="shortcut-name">{{ t(`settings.shortcuts.actions.${actionId}`) }}</span>
+                  <div
+                    class="shortcut-key"
+                    :class="{ capturing: capturingAction === actionId }"
+                    tabindex="0"
+                    @click="startCapture(actionId)"
+                    @keydown="capturingAction === actionId && onCaptureKeydown($event, actionId)"
+                    @blur="capturingAction === actionId && (capturingAction = null)"
+                  >
+                    {{ capturingAction === actionId ? t("settings.shortcuts.pressKey") : formatCombo(shortcutsStore.keymap[actionId]) }}
+                  </div>
+                  <p v-if="conflictInfo?.actionId === actionId" class="shortcut-conflict">
+                    {{ t("settings.shortcuts.conflict", { action: t(`settings.shortcuts.actions.${conflictInfo.conflictAction}`) }) }}
+                    <button @click="overwriteConflict">{{ t("settings.shortcuts.conflictOverwrite") }}</button>
+                  </p>
                 </div>
               </div>
 
-              <div class="setting-group disabled">
+              <div class="setting-group">
                 <div class="setting-label">
                   <i class="fa-solid fa-arrow-pointer"></i>
                   <div>
@@ -341,8 +384,23 @@
                     <p>{{ t("settings.shortcuts.navigation.description") }}</p>
                   </div>
                 </div>
-                <div class="coming-soon-badge">
-                  {{ t("settings.comingSoon") }}
+
+                <div class="shortcut-row" v-for="actionId in navigationActions" :key="actionId">
+                  <span class="shortcut-name">{{ t(`settings.shortcuts.actions.${actionId}`) }}</span>
+                  <div
+                    class="shortcut-key"
+                    :class="{ capturing: capturingAction === actionId }"
+                    tabindex="0"
+                    @click="startCapture(actionId)"
+                    @keydown="capturingAction === actionId && onCaptureKeydown($event, actionId)"
+                    @blur="capturingAction === actionId && (capturingAction = null)"
+                  >
+                    {{ capturingAction === actionId ? t("settings.shortcuts.pressKey") : formatCombo(shortcutsStore.keymap[actionId]) }}
+                  </div>
+                  <p v-if="conflictInfo?.actionId === actionId" class="shortcut-conflict">
+                    {{ t("settings.shortcuts.conflict", { action: t(`settings.shortcuts.actions.${conflictInfo.conflictAction}`) }) }}
+                    <button @click="overwriteConflict">{{ t("settings.shortcuts.conflictOverwrite") }}</button>
+                  </p>
                 </div>
               </div>
             </div>
@@ -410,6 +468,9 @@ import { useAccentStore } from "../store/accent.js"
 import { useLastfmStore } from "../store/lastfm.js"
 import { usePlayerStore } from "../store/player.js"
 import { useUpdateStore } from "../store/update.js"
+import { useProfileStore } from "../store/profile.js"
+import { useShortcutsStore } from "../store/shortcuts.js"
+import { normalizeKeyEvent, formatCombo } from "../utils/keyCombo.js"
 import EqualizerPanel from "./EqualizerPanel.vue"
 
 const props = defineProps({
@@ -429,6 +490,55 @@ const accentStore = useAccentStore()
 const lastfmStore = useLastfmStore()
 const player = usePlayerStore()
 const updateStore = useUpdateStore()
+const profileStore = useProfileStore()
+const usernameInput = ref(profileStore.username)
+const shortcutsStore = useShortcutsStore()
+
+const playbackActions = [
+  "playPause",
+  "nextTrack",
+  "previousTrack",
+  "seekForward",
+  "seekBackward",
+  "volumeUp",
+  "volumeDown",
+  "muteToggle",
+  "shuffleToggle",
+  "repeatCycle",
+]
+const navigationActions = ["focusSearch", "goToLibrary"]
+
+const capturingAction = ref(null)
+const conflictInfo = ref(null)
+
+function startCapture(actionId) {
+  capturingAction.value = actionId
+  conflictInfo.value = null
+}
+
+function onCaptureKeydown(e, actionId) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.key === "Escape") {
+    capturingAction.value = null
+    return
+  }
+  const combo = normalizeKeyEvent(e)
+  if (!combo) return
+  const result = shortcutsStore.setShortcut(actionId, combo)
+  if (!result.ok) {
+    conflictInfo.value = { actionId, combo, conflictAction: result.conflictAction }
+  } else {
+    capturingAction.value = null
+  }
+}
+
+function overwriteConflict() {
+  const { actionId, combo } = conflictInfo.value
+  shortcutsStore.setShortcut(actionId, combo, { force: true })
+  conflictInfo.value = null
+  capturingAction.value = null
+}
 const lastfmApiKey = ref("")
 const lastfmApiSecret = ref("")
 const { locale, t } = useI18n()
@@ -466,6 +576,11 @@ const toggleFetchLyricsOnline = () => {
 }
 
 const tabs = [
+  {
+    id: "profile",
+    labelKey: "settings.tabs.profile",
+    icon: "fa-solid fa-user",
+  },
   {
     id: "appearance",
     labelKey: "settings.tabs.appearance",
@@ -917,6 +1032,68 @@ onMounted(() => {
   color: white;
   border-radius: 8px;
   font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Keyboard Shortcuts */
+.setting-label .check-updates-button {
+  margin-left: auto;
+  align-self: center;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-name {
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.shortcut-key {
+  min-width: 90px;
+  text-align: center;
+  padding: 0.4rem 0.9rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shortcut-key:hover {
+  border-color: var(--accent);
+}
+
+.shortcut-key.capturing {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shortcut-conflict {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: #e74c3c;
+  margin: 0.25rem 0 0 0;
+}
+
+.shortcut-conflict button {
+  margin-left: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
   font-weight: 600;
 }
 

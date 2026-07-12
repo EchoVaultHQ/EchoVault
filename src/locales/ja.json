@@ -144,6 +144,7 @@
     "close": "閉じる",
     "comingSoon": "近日対応",
     "tabs": {
+      "profile": "プロフィール",
       "appearance": "外観",
       "language": "言語・地域",
       "audio": "オーディオ",
@@ -152,7 +153,13 @@
       "shortcuts": "ショートカット",
       "about": "情報"
     },
-    
+    "profile": {
+      "title": "プロフィール",
+      "description": "挨拶をパーソナライズします",
+      "usernameLabel": "表示名",
+      "usernamePlaceholder": "名前を入力してください"
+    },
+
     "connectors": {
       "title": "連携サービス",
       "description": "Echoをオンライン音楽サービスや外部サービスと連携します。"
