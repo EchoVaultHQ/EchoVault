@@ -109,7 +109,6 @@ const route = useRoute()
 
 const isMac = window.api.platform === "darwin"
 
-const emit = defineEmits(["toggle-setting-menu"])
 const showDropdown = ref(false)
 const searchStore = useSearchStore()
 const localQuery = ref(searchStore.query)
@@ -184,7 +183,7 @@ onBeforeUnmount(() => {
 })
 
 const toggleSettingMenuView = () => {
-  emit("toggle-setting-menu")
+  router.push("/settings")
 }
 </script>
 

@@ -20,6 +20,7 @@
   --accent: #8e44ad;
   --accent-hover: #9b59b6;
   --hover-bg: rgba(142, 68, 173, 0.25);
+  --danger: #e74c3c;
 
   --border-color: #282828;
   --text-color: #e5e5e5;
@@ -72,6 +73,7 @@
   --accent: #6c5ce7;
   --accent-hover: #8e7dff;
   --hover-bg: rgba(108, 92, 231, 0.15);
+  --danger: #c0392b;
 
   --border-color: #dcdcdc;
   --text-color: #1e1e1e;

@@ -1,16 +1,11 @@
 <template>
   <div id="app" :class="{ 'immersive-active': isImmersiveMode }">
-    <TopBar @toggle-setting-menu="toggleSettingMenu" v-if="!isImmersiveMode" />
+    <TopBar v-if="!isImmersiveMode" />
 
     <div class="main-layout" :class="{ 'queue-open': showQueue }">
-      <SideNav :collapsed="showQueue" v-if="showMainViews" />
+      <SideNav :collapsed="showQueue" />
       <main class="content-area">
-        <Setting
-          :showSettingMenu="showSettingMenu"
-          :initialTab="settingsInitialTab"
-          @close="closeSettingMenu"
-        />
-        <router-view v-if="showMainViews" />
+        <router-view />
       </main>
       <LyricsPanel />
       <QueueSidebar :showQueue="showQueue" @close="closeQueue" />
@@ -20,7 +15,7 @@
       @toggle-queue="toggleQueue"
       @toggle-immersive-mode="toggleImmersiveMode"
       @open-equalizer="openEqualizer"
-      v-if="showMainViews && !isImmersiveMode"
+      v-if="!isImmersiveMode"
     />
     <ImmersiveMode
       v-if="isImmersiveMode"
@@ -33,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue"
+import { ref, onMounted, onUnmounted } from "vue"
 import { useRouter } from "vue-router"
 import TopBar from "./components/TopBar.vue"
 import SideNav from "./components/SideNav.vue"
@@ -42,7 +37,6 @@ import QueueSidebar from "./components/QueueSidebar.vue"
 import LyricsPanel from "./components/LyricsPanel.vue"
 import Toast from "./components/Toast.vue"
 import MiniPlayer from "./components/MiniPlayer.vue"
-import Setting from "./components/Setting.vue"
 import ImmersiveMode from "./components/ImmersiveMode.vue"
 import UpdateBanner from "./components/UpdateBanner.vue"
 import { useUpdateStore } from "./store/update.js"
@@ -128,26 +122,14 @@ onUnmounted(() => {
 })
 
 const showQueue = ref(false)
-const showSettingMenu = ref(false)
-const settingsInitialTab = ref("appearance")
-const showMainViews = computed(() => !showSettingMenu.value)
 const isImmersiveMode = ref(false)
 
 const toggleQueue = () => {
   showQueue.value = !showQueue.value
 }
 
-const toggleSettingMenu = () => {
-  showSettingMenu.value = !showSettingMenu.value
-}
-
 const openEqualizer = () => {
-  settingsInitialTab.value = "audio"
-  showSettingMenu.value = true
-}
-
-const closeSettingMenu = () => {
-  showSettingMenu.value = false
+  router.push({ path: "/settings", query: { tab: "audio" } })
 }
 
 const closeQueue = () => {

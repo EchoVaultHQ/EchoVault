@@ -10,6 +10,7 @@ import Library from "../components/Library.vue"
 import MediaManagement from "../components/MediaManagement.vue"
 import Playlists from "../components/Playlists.vue"
 import SearchResults from "../components/SearchResults.vue"
+import SettingsPage from "../components/settings/SettingsPage.vue"
 
 const routes = [
   { path: "/", component: Home },
@@ -22,6 +23,7 @@ const routes = [
   { path: "/playlists", component: Playlists },
   { path: "/playlists/:id", component: Playlists },
   { path: "/search", component: SearchResults },
+  { path: "/settings", component: SettingsPage },
 ]
 
 export default createRouter({
