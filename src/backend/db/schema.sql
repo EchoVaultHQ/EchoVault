@@ -49,3 +49,9 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
   FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
   FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS profile (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  username TEXT DEFAULT '',
+  avatar_path TEXT
+);

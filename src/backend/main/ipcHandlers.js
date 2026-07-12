@@ -9,6 +9,7 @@ import { registerPlaylistHandlers } from "./playlists";
 import { registerEnhanceHandlers } from "./enhance";
 import { registerLastfmHandlers } from "./lastfm";
 import { registerUpdateHandlers } from "./update";
+import { registerProfileHandlers } from "./profile";
 
 export function registerAllHandlers(mainWindow, db) {
   registerArtistHandlers(db);
@@ -22,4 +23,5 @@ export function registerAllHandlers(mainWindow, db) {
   registerEnhanceHandlers(mainWindow, db);
   registerLastfmHandlers();
   registerUpdateHandlers(mainWindow);
+  registerProfileHandlers(mainWindow, db);
 }

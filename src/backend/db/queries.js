@@ -140,3 +140,14 @@ export const GET_TOP_PLAYED_ARTISTS = `
 export const GET_TOTAL_PLAYS = `
   SELECT SUM(noOfPlays) as totalPlays FROM tracks
 `
+
+//  Profile
+export const GET_PROFILE = `SELECT username, avatar_path FROM profile WHERE id = 1`
+export const UPSERT_PROFILE_USERNAME = `
+  INSERT INTO profile (id, username) VALUES (1, ?)
+  ON CONFLICT(id) DO UPDATE SET username = excluded.username
+`
+export const UPSERT_PROFILE_AVATAR = `
+  INSERT INTO profile (id, avatar_path) VALUES (1, ?)
+  ON CONFLICT(id) DO UPDATE SET avatar_path = excluded.avatar_path
+`

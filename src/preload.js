@@ -128,4 +128,12 @@ contextBridge.exposeInMainWorld("api", {
   openExternal: (url) => ipcRenderer.invoke("update:open-external", url),
   checkForUpdates: () => ipcRenderer.invoke("update:check"),
   getAppVersion: () => ipcRenderer.invoke("app:get-version"),
+
+  // profile
+  profile: {
+    get: () => ipcRenderer.invoke("profile:get"),
+    setUsername: (name) => ipcRenderer.invoke("profile:setUsername", name),
+    pickAvatar: () => ipcRenderer.invoke("profile:pickAvatar"),
+    clearAvatar: () => ipcRenderer.invoke("profile:clearAvatar"),
+  },
 })
