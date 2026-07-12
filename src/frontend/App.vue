@@ -33,6 +33,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue"
+import { useRouter } from "vue-router"
 import TopBar from "./components/TopBar.vue"
 import SideNav from "./components/SideNav.vue"
 import PlayerBar from "./components/PlayerBar.vue"
@@ -44,13 +45,68 @@ import ImmersiveMode from "./components/ImmersiveMode.vue"
 import UpdateBanner from "./components/UpdateBanner.vue"
 import { useUpdateStore } from "./store/update.js"
 import { usePlayerStore } from "./store/player.js"
+import { useShortcutsStore } from "./store/shortcuts.js"
+import { useProfileStore } from "./store/profile.js"
+import { normalizeKeyEvent, isEditableTarget } from "./utils/keyCombo.js"
 
 const updateStore = useUpdateStore()
 const playerStore = usePlayerStore()
+const shortcutsStore = useShortcutsStore()
+const profileStore = useProfileStore()
+const router = useRouter()
 let unsubscribeUpdate = null
 let unsubscribeTrayControl = null
 
+function handleGlobalKeydown(e) {
+  if (isEditableTarget(e.target)) return
+  const combo = normalizeKeyEvent(e)
+  if (!combo) return
+  const action = shortcutsStore.actionForCombo(combo)
+  if (!action) return
+  e.preventDefault()
+
+  switch (action) {
+    case "playPause":
+      playerStore.togglePlay()
+      break
+    case "nextTrack":
+      playerStore.playNext()
+      break
+    case "previousTrack":
+      playerStore.playPrevious()
+      break
+    case "seekForward":
+      playerStore.seekTo(playerStore.getLiveTime() + 5)
+      break
+    case "seekBackward":
+      playerStore.seekTo(playerStore.getLiveTime() - 5)
+      break
+    case "volumeUp":
+      playerStore.setVolume(playerStore.volume + 0.1)
+      break
+    case "volumeDown":
+      playerStore.setVolume(playerStore.volume - 0.1)
+      break
+    case "muteToggle":
+      playerStore.toggleMute()
+      break
+    case "shuffleToggle":
+      playerStore.toggleShuffle()
+      break
+    case "repeatCycle":
+      playerStore.toggleRepeat()
+      break
+    case "focusSearch":
+      document.getElementById("global-search-input")?.focus()
+      break
+    case "goToLibrary":
+      router.push("/library")
+      break
+  }
+}
+
 onMounted(() => {
+  profileStore.load()
   unsubscribeUpdate = window.api.onUpdateAvailable((data) => updateStore.setResult(data))
   unsubscribeTrayControl = window.api.onTrayControl((action) => {
     if (action === "toggle-play") playerStore.togglePlay()
@@ -60,11 +116,13 @@ onMounted(() => {
     else if (action === "volume-up") playerStore.setVolume(playerStore.volume + 0.1)
     else if (action === "volume-down") playerStore.setVolume(playerStore.volume - 0.1)
   })
+  window.addEventListener("keydown", handleGlobalKeydown)
 })
 
 onUnmounted(() => {
   if (unsubscribeUpdate) unsubscribeUpdate()
   if (unsubscribeTrayControl) unsubscribeTrayControl()
+  window.removeEventListener("keydown", handleGlobalKeydown)
 })
 
 const showQueue = ref(false)
