@@ -21,7 +21,8 @@
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
-      "evening": "Good evening"
+      "evening": "Good evening",
+      "night": "Good night"
     },
     "mostPlayed": "Most Played",
     "yourPlaylists": "Your Playlists",
@@ -134,7 +135,8 @@
     "noTrackSelected": "No track selected",
     "tracks": "tracks",
     "noPlaylists": "No playlists",
-    "noLyricsFound": "No lyrics found"
+    "noLyricsFound": "No lyrics found",
+    "justNow": "Just now"
   },
 
   "settings": {
@@ -257,6 +259,10 @@
     "shortcuts": {
       "title": "Keyboard Shortcuts",
       "description": "View and customize keyboard shortcuts",
+      "resetAll": "Reset to Defaults",
+      "pressKey": "Press a key…",
+      "conflict": "Already assigned to \"{action}\"",
+      "conflictOverwrite": "Use anyway",
       "playback": {
         "title": "Playback Controls",
         "description": "Shortcuts for play, pause, skip, and more"
@@ -264,6 +270,20 @@
       "navigation": {
         "title": "Navigation Shortcuts",
         "description": "Quick access to different sections"
+      },
+      "actions": {
+        "playPause": "Play / Pause",
+        "nextTrack": "Next Track",
+        "previousTrack": "Previous Track",
+        "seekForward": "Seek Forward 5s",
+        "seekBackward": "Seek Backward 5s",
+        "volumeUp": "Volume Up",
+        "volumeDown": "Volume Down",
+        "muteToggle": "Mute / Unmute",
+        "shuffleToggle": "Toggle Shuffle",
+        "repeatCycle": "Cycle Repeat Mode",
+        "focusSearch": "Focus Search",
+        "goToLibrary": "Go to Library"
       }
     },
     "about": {

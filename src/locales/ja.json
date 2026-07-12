@@ -21,7 +21,8 @@
     "greeting": {
       "morning": "おはようございます",
       "afternoon": "こんにちは",
-      "evening": "こんばんは"
+      "evening": "こんばんは",
+      "night": "こんばんは"
     },
     "mostPlayed": "よく再生される曲",
     "yourPlaylists": "あなたのプレイリスト",
@@ -134,7 +135,8 @@
     "noTrackSelected": "曲が選択されていません",
     "tracks": "曲",
     "noPlaylists": "プレイリストがありません",
-    "noLyricsFound": "歌詞が見つかりません"
+    "noLyricsFound": "歌詞が見つかりません",
+    "justNow": "たった今"
   },
 
   "settings": {
@@ -259,6 +261,10 @@
     "shortcuts": {
       "title": "キーボードショートカット",
       "description": "ショートカットの表示・カスタマイズ",
+      "resetAll": "デフォルトに戻す",
+      "pressKey": "キーを押してください…",
+      "conflict": "「{action}」に既に割り当てられています",
+      "conflictOverwrite": "上書きする",
       "playback": {
         "title": "再生操作",
         "description": "再生・一時停止・スキップなどのショートカット"
@@ -266,6 +272,20 @@
       "navigation": {
         "title": "ナビゲーションショートカット",
         "description": "各セクションへのクイックアクセス"
+      },
+      "actions": {
+        "playPause": "再生 / 一時停止",
+        "nextTrack": "次の曲",
+        "previousTrack": "前の曲",
+        "seekForward": "5秒進む",
+        "seekBackward": "5秒戻る",
+        "volumeUp": "音量を上げる",
+        "volumeDown": "音量を下げる",
+        "muteToggle": "ミュート切り替え",
+        "shuffleToggle": "シャッフル切り替え",
+        "repeatCycle": "リピートモード切り替え",
+        "focusSearch": "検索欄にフォーカス",
+        "goToLibrary": "ライブラリへ移動"
       }
     },
     "about": {

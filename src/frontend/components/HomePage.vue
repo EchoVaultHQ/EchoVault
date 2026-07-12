@@ -2,6 +2,7 @@
   <div class="home-page">
     <section class="now-playing-hero">
       <div class="hero-info">
+        <p class="greeting-text">{{ greeting }}</p>
         <div class="now-playing-label">
           <span class="label-text">{{ t("home.nowPlaying") }}</span>
           <span class="eq-bars" :class="{ paused: !player.isPlaying }">
@@ -57,8 +58,8 @@
         <img v-if="player.currentTrack?.coverDataUrl" :src="player.currentTrack.coverDataUrl" alt="Album art" />
         <div v-else class="art-empty">
           <ImageIcon :size="28" />
-          <p>{{ t("home.dropAlbumArt") }}</p>
-          <p class="browse">{{ t("home.browseFiles") }}</p>
+          <!-- <p>{{ t("home.dropAlbumArt") }}</p>
+          <p class="browse">{{ t("home.browseFiles") }}</p> -->
         </div>
       </div>
     </section>
@@ -131,6 +132,7 @@ import {
 } from "@lucide/vue"
 import { usePlayerStore } from "../store/player.js"
 import { usePlaylistsStore } from "../store/playlists.js"
+import { useProfileStore } from "../store/profile.js"
 import { extractCoverColor } from "../utils/coverColor.js"
 import {
   formatTime,
@@ -143,7 +145,22 @@ const { t } = useI18n()
 const router = useRouter()
 const player = usePlayerStore()
 const playlistsStore = usePlaylistsStore()
+const profile = useProfileStore()
 const { playlists } = storeToRefs(playlistsStore)
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  const key =
+    hour >= 5 && hour < 12
+      ? "morning"
+      : hour >= 12 && hour < 17
+        ? "afternoon"
+        : hour >= 17 && hour < 21
+          ? "evening"
+          : "night"
+  const base = t(`home.greeting.${key}`)
+  return profile.username ? `${base}, ${profile.username}` : base
+})
 
 const { seek, showHoverTime, hideHoverTime } = useProgressBar(player)
 const { togglePlay, playPreviousTrack, playNextTrack } = usePlaybackControls(player)
@@ -262,6 +279,12 @@ onMounted(async () => {
   grid-template-columns: 1fr 340px;
   gap: 32px;
   align-items: start;
+}
+
+.greeting-text {
+  font-size: 0.95rem;
+  color: var(--muted-text);
+  margin: 0;
 }
 
 .hero-info {
