@@ -56,35 +56,83 @@ function writeAuth({ apiKey, apiSecret, sessionKey, username, scrobblingEnabled 
   )
 }
 
+export function getStatus() {
+  const auth = readAuth()
+  return {
+    hasCredentials: !!auth,
+    connected: !!auth?.sessionKey,
+    username: auth?.username ?? null,
+    scrobblingEnabled: auth?.scrobblingEnabled ?? false,
+  }
+}
+
+export function saveCredentials({ apiKey, apiSecret }) {
+  if (!apiKey || !apiSecret) return { ok: false, error: "missing-credentials" }
+  if (!safeStorage.isEncryptionAvailable()) {
+    return { ok: false, error: "secure storage unavailable on this system" }
+  }
+
+  const existing = readAuth()
+  writeAuth({
+    apiKey,
+    apiSecret,
+    sessionKey: existing?.sessionKey,
+    username: existing?.username,
+    scrobblingEnabled: existing?.scrobblingEnabled,
+  })
+  return { ok: true }
+}
+
+export function disconnect() {
+  const auth = readAuth()
+  if (auth) {
+    writeAuth({
+      apiKey: auth.apiKey,
+      apiSecret: auth.apiSecret,
+      sessionKey: null,
+      username: null,
+      scrobblingEnabled: false,
+    })
+  }
+  return { ok: true }
+}
+
+export function setEnabled(enabled) {
+  const auth = readAuth()
+  if (!auth?.sessionKey) return { ok: false, error: "not-connected" }
+  writeAuth({ ...auth, scrobblingEnabled: enabled })
+  return { ok: true }
+}
+
+export async function reportNowPlaying(track) {
+  const auth = readAuth()
+  if (!auth?.sessionKey || !auth.scrobblingEnabled || !track?.artist || !track?.title) return
+  const result = await updateNowPlaying(auth, auth.sessionKey, track)
+  if (!result.ok) {
+    log.error("lastfm :: now-playing update failed:", result.error)
+  }
+}
+
+export async function reportScrobble(track) {
+  const auth = readAuth()
+  if (!auth?.sessionKey || !auth.scrobblingEnabled || !track?.artist || !track?.title) return
+
+  flushQueue(getQueuePath())
+
+  const timestamp = Math.floor(Date.now() / 1000)
+  const result = await scrobble(auth, auth.sessionKey, track, timestamp)
+  if (!result.ok) {
+    log.error("lastfm :: scrobble failed:", result.error)
+    enqueueFailedScrobble(getQueuePath(), auth, auth.sessionKey, track, timestamp)
+  }
+}
+
 export function registerLastfmHandlers() {
   let pendingToken = null
 
-  ipcMain.handle("lastfm:get-status", () => {
-    const auth = readAuth()
-    return {
-      hasCredentials: !!auth,
-      connected: !!auth?.sessionKey,
-      username: auth?.username ?? null,
-      scrobblingEnabled: auth?.scrobblingEnabled ?? false,
-    }
-  })
+  ipcMain.handle("lastfm:get-status", () => getStatus())
 
-  ipcMain.handle("lastfm:save-credentials", (event, { apiKey, apiSecret }) => {
-    if (!apiKey || !apiSecret) return { ok: false, error: "missing-credentials" }
-    if (!safeStorage.isEncryptionAvailable()) {
-      return { ok: false, error: "secure storage unavailable on this system" }
-    }
-
-    const existing = readAuth()
-    writeAuth({
-      apiKey,
-      apiSecret,
-      sessionKey: existing?.sessionKey,
-      username: existing?.username,
-      scrobblingEnabled: existing?.scrobblingEnabled,
-    })
-    return { ok: true }
-  })
+  ipcMain.handle("lastfm:save-credentials", (event, credentials) => saveCredentials(credentials))
 
   ipcMain.handle("lastfm:connect", async () => {
     const auth = readAuth()
@@ -117,47 +165,11 @@ export function registerLastfmHandlers() {
     return { ok: true, username: result.username }
   })
 
-  ipcMain.handle("lastfm:disconnect", () => {
-    const auth = readAuth()
-    if (auth) {
-      writeAuth({
-        apiKey: auth.apiKey,
-        apiSecret: auth.apiSecret,
-        sessionKey: null,
-        username: null,
-        scrobblingEnabled: false,
-      })
-    }
-    return { ok: true }
-  })
+  ipcMain.handle("lastfm:disconnect", () => disconnect())
 
-  ipcMain.handle("lastfm:set-enabled", (event, enabled) => {
-    const auth = readAuth()
-    if (!auth?.sessionKey) return { ok: false, error: "not-connected" }
-    writeAuth({ ...auth, scrobblingEnabled: enabled })
-    return { ok: true }
-  })
+  ipcMain.handle("lastfm:set-enabled", (event, enabled) => setEnabled(enabled))
 
-  ipcMain.handle("lastfm:now-playing", async (event, track) => {
-    const auth = readAuth()
-    if (!auth?.sessionKey || !auth.scrobblingEnabled || !track?.artist || !track?.title) return
-    const result = await updateNowPlaying(auth, auth.sessionKey, track)
-    if (!result.ok) {
-      log.error("lastfm :: now-playing update failed:", result.error)
-    }
-  })
+  ipcMain.handle("lastfm:now-playing", async (event, track) => reportNowPlaying(track))
 
-  ipcMain.handle("lastfm:scrobble", async (event, track) => {
-    const auth = readAuth()
-    if (!auth?.sessionKey || !auth.scrobblingEnabled || !track?.artist || !track?.title) return
-
-    flushQueue(getQueuePath())
-
-    const timestamp = Math.floor(Date.now() / 1000)
-    const result = await scrobble(auth, auth.sessionKey, track, timestamp)
-    if (!result.ok) {
-      log.error("lastfm :: scrobble failed:", result.error)
-      enqueueFailedScrobble(getQueuePath(), auth, auth.sessionKey, track, timestamp)
-    }
-  })
+  ipcMain.handle("lastfm:scrobble", async (event, track) => reportScrobble(track))
 }
