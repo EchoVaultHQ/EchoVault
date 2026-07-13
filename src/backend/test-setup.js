@@ -9,4 +9,8 @@ vi.mock("electron", () => ({
     handle: vi.fn(),
     on: vi.fn(),
   },
+  dialog: {
+    showOpenDialog: vi.fn(),
+    showMessageBox: vi.fn(),
+  },
 }))

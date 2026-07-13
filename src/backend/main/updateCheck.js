@@ -38,14 +38,14 @@ function fetchJson(url, redirectsLeft = MAX_REDIRECTS) {
 }
 
 /** Strips a leading "v" and any pre-release/build suffix, e.g. "v2.3.0-beta" -> [2, 3, 0]. */
-function parseVersion(raw) {
+export function parseVersion(raw) {
   const core = String(raw).replace(/^v/i, "").split(/[-+]/)[0]
   const parts = core.split(".").map((n) => Number.parseInt(n, 10) || 0)
   return [parts[0] || 0, parts[1] || 0, parts[2] || 0]
 }
 
 /** True if `a` is strictly greater than `b`, comparing major.minor.patch numerically. */
-function isNewer(a, b) {
+export function isNewer(a, b) {
   for (let i = 0; i < 3; i++) {
     if (a[i] !== b[i]) return a[i] > b[i]
   }
