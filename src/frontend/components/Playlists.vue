@@ -25,6 +25,19 @@
         </div>
       </div>
 
+      <!-- Enhanced Songs Card -->
+      <div class="playlist-card enhanced-card" @click="selectPlaylist('enhanced')">
+        <div class="card-cover enhanced-cover">
+          <Sparkles :size="48" />
+        </div>
+        <div class="card-info">
+          <h3>{{ t("enhancedPlaylist.title") }}</h3>
+          <p class="track-count">
+            {{ enhancedTracks.length }} {{ t("playlist.tracks") }}
+          </p>
+        </div>
+      </div>
+
       <!-- User Playlists -->
       <div
         v-for="playlist in playlists"
@@ -75,6 +88,12 @@
           <div v-if="selectedPlaylist === 'liked'" class="liked-hero-cover">
             <i class="fa-solid fa-heart"></i>
           </div>
+          <div
+            v-else-if="selectedPlaylist === 'enhanced'"
+            class="enhanced-hero-cover"
+          >
+            <Sparkles :size="80" />
+          </div>
           <img
             v-else-if="currentPlaylistCover"
             class="hero-cover-image"
@@ -89,7 +108,9 @@
             {{
               selectedPlaylist === "liked"
                 ? t("playlist.type.liked")
-                : t("playlist.type.playlist")
+                : selectedPlaylist === "enhanced"
+                  ? t("playlist.type.enhanced")
+                  : t("playlist.type.playlist")
             }}
           </p>
           <h1>{{ currentPlaylistName }}</h1>
@@ -128,7 +149,9 @@
           :formatDuration="formatTime"
           :playlists="playlists"
           :currentPlaylistId="
-            selectedPlaylist !== 'liked' ? selectedPlaylist : null
+            selectedPlaylist !== 'liked' && selectedPlaylist !== 'enhanced'
+              ? selectedPlaylist
+              : null
           "
           @select="playTrack"
           @add-to-playlist="handleAddToPlaylist"
@@ -174,9 +197,10 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { storeToRefs } from "pinia"
-import { Play, Shuffle } from "@lucide/vue"
+import { Play, Shuffle, Sparkles } from "@lucide/vue"
 import { usePlayerStore } from "../store/player.js"
 import { usePlaylistsStore } from "../store/playlists.js"
+import { useEnhanceStore } from "../store/enhance.js"
 import TrackList from "./TrackList.vue"
 import TrackSortControls from "./TrackSortControls.vue"
 import { useTrackSort } from "../utils/useTrackSort.js"
@@ -189,8 +213,10 @@ const route = useRoute()
 const router = useRouter()
 const playlistsStore = usePlaylistsStore()
 const { playlists } = storeToRefs(playlistsStore)
+const enhanceStore = useEnhanceStore()
 
 const likedTracks = ref([])
+const enhancedTracks = ref([])
 const selectedPlaylist = computed(() => route.params.id ?? null)
 const playlistTracks = ref({})
 const showCreateDialog = ref(false)
@@ -212,6 +238,23 @@ async function loadLikedTracks() {
     })
   )
   likedTracks.value = withCovers
+}
+
+// Load enhanced tracks
+async function loadEnhancedTracks() {
+  const result = await window.api.getEnhancedTracks()
+  const withCovers = await Promise.all(
+    result.map(async (track) => {
+      if (track.cover) {
+        const url = track.cover.startsWith("/")
+          ? `echovault://${track.cover}`
+          : `echovault:///${track.cover}`
+        return { ...track, coverDataUrl: url }
+      }
+      return { ...track, coverDataUrl: null }
+    })
+  )
+  enhancedTracks.value = withCovers
 }
 
 // Create new playlist
@@ -310,6 +353,9 @@ const currentTracks = computed(() => {
   if (selectedPlaylist.value === "liked") {
     return likedTracks.value
   }
+  if (selectedPlaylist.value === "enhanced") {
+    return enhancedTracks.value
+  }
   return playlistTracks.value[selectedPlaylist.value] || []
 })
 
@@ -320,6 +366,7 @@ const { sortField, sortDirection, sortedTracks } = useTrackSort(
 
 const currentPlaylistName = computed(() => {
   if (selectedPlaylist.value === "liked") return t("liked.title")
+  if (selectedPlaylist.value === "enhanced") return t("enhancedPlaylist.title")
   const playlist = playlists.value.find(
     (p) => String(p.id) === String(selectedPlaylist.value)
   )
@@ -327,7 +374,8 @@ const currentPlaylistName = computed(() => {
 })
 
 const currentPlaylistCover = computed(() => {
-  if (selectedPlaylist.value === "liked") return null
+  if (selectedPlaylist.value === "liked" || selectedPlaylist.value === "enhanced")
+    return null
   const playlist = playlists.value.find(
     (p) => String(p.id) === String(selectedPlaylist.value)
   )
@@ -337,8 +385,8 @@ const currentPlaylistCover = computed(() => {
 // Play track
 function playTrack(track) {
   const queueSource =
-    selectedPlaylist.value === "liked"
-      ? "liked"
+    selectedPlaylist.value === "liked" || selectedPlaylist.value === "enhanced"
+      ? selectedPlaylist.value
       : `playlist-${selectedPlaylist.value}`
 
   if (player.queueSource !== queueSource) {
@@ -376,17 +424,19 @@ watch(showCreateDialog, async (newVal) => {
 })
 
 watch(() => player.likedUpdated, loadLikedTracks)
+watch(() => enhanceStore.completedCount, loadEnhancedTracks)
 
 watch(
   () => route.params.id,
   (id) => {
-    if (id && id !== "liked") loadPlaylistTracks(id)
+    if (id && id !== "liked" && id !== "enhanced") loadPlaylistTracks(id)
   },
   { immediate: true }
 )
 
 onMounted(() => {
   loadLikedTracks()
+  loadEnhancedTracks()
   playlistsStore.loadPlaylists()
 })
 </script>
@@ -475,6 +525,24 @@ onMounted(() => {
 .liked-cover svg {
   width: 60px;
   height: 60px;
+}
+
+/* Enhanced Card */
+.enhanced-card .enhanced-cover {
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    var(--accent-hover) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.enhanced-cover svg {
+  width: 48px;
+  height: 48px;
 }
 
 /* Card Cover */
@@ -622,6 +690,20 @@ i.fa-plus,
 .liked-hero-cover svg {
   width: 80px;
   height: 80px;
+}
+
+.enhanced-hero-cover {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    var(--accent-hover) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
 }
 
 .hero-cover-image {

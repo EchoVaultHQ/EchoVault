@@ -90,6 +90,10 @@
     "title": "いいねした曲"
   },
 
+  "enhancedPlaylist": {
+    "title": "高音質化した曲"
+  },
+
   "queue": {
     "title": "再生キュー",
     "shuffled": "シャッフル",
@@ -329,6 +333,7 @@
     "confirmDelete": "このプレイリストを削除しますか?",
     "type": {
       "liked": "いいねした曲のプレイリスト",
+      "enhanced": "高音質化した曲のプレイリスト",
       "playlist": "プレイリスト"
     },
     "play": "再生",

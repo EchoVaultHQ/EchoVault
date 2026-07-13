@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tracks (
   duration REAL,
   cover TEXT,
   isLiked INTEGER DEFAULT 0,
+  isEnhanced INTEGER DEFAULT 0,
   noOfPlays INTEGER DEFAULT 0,
   last_played_at TEXT,
   file_size INTEGER,

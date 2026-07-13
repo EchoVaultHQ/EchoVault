@@ -10,6 +10,7 @@ import {
   GET_RECENT_TRACKS,
   GET_LIKED_TRACKS,
   UPDATE_LIKE,
+  GET_ENHANCED_TRACKS,
 } from "../db/queries.js"
 import log from "../../logger.js"
 
@@ -30,6 +31,11 @@ export function registerTrackHandlers(mainWindow, db) {
   // liked
   ipcMain.handle("tracks:get-liked-tracks", () =>
     db.prepare(GET_LIKED_TRACKS).all()
+  )
+
+  // enhanced
+  ipcMain.handle("tracks:get-enhanced-tracks", () =>
+    db.prepare(GET_ENHANCED_TRACKS).all()
   )
 
   // like a track

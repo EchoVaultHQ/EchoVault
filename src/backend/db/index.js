@@ -56,6 +56,7 @@ export function initDB() {
         duration REAL,
         cover TEXT,
         isLiked INTEGER DEFAULT 0,
+        isEnhanced INTEGER DEFAULT 0,
         noOfPlays INTEGER DEFAULT 0,
         last_played_at TEXT,
         file_size INTEGER,
@@ -77,6 +78,12 @@ export function initDB() {
 
   try {
     db.exec("ALTER TABLE tracks ADD COLUMN file_size INTEGER")
+  } catch (err) {
+    if (!/duplicate column/i.test(err.message)) throw err
+  }
+
+  try {
+    db.exec("ALTER TABLE tracks ADD COLUMN isEnhanced INTEGER DEFAULT 0")
   } catch (err) {
     if (!/duplicate column/i.test(err.message)) throw err
   }

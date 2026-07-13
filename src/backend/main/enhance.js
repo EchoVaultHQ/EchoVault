@@ -10,6 +10,7 @@ import {
   INSERT_ARTIST_IF_NOT_EXISTS,
   GET_ARTIST_BY_NAME,
   UPSERT_TRACK,
+  MARK_TRACK_ENHANCED,
 } from "../db/queries.js"
 import log from "../../logger.js"
 
@@ -106,8 +107,10 @@ async function addEnhancedTrack(db, sourceTrack, flacPath) {
     meta.album || sourceTrack.album || "",
     artistName,
     meta.duration || 0,
-    meta.cover || null
+    meta.cover || null,
+    fs.statSync(flacPath).size
   )
+  db.prepare(MARK_TRACK_ENHANCED).run(flacPath)
 
   return db.prepare(GET_TRACK_BY_PATH).get(flacPath)
 }

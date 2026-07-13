@@ -55,7 +55,7 @@
 
             <!-- DROPDOWN MENU -->
             <div v-if="openMenuId === track.id" class="dropdown-menu"
-              :style="{ top: menuPos.y + 'px', left: menuPos.x + 'px' }">
+              :style="{ top: menuPos.y + 'px', right: menuPos.x + 'px' }">
               <div v-for="item in buildMenuItems(track)" :key="item.key" class="dropdown-item"
                 :class="{ danger: item.danger, disabled: item.disabled, 'has-sub': item.submenu }"
                 @click.stop="!item.disabled && !item.submenu && item.onClick?.()">
@@ -129,7 +129,7 @@ function toggleMenu(id, event) {
 
   const rect = event.target.getBoundingClientRect()
   menuPos.value = {
-    x: rect.left - 150 + rect.width,
+    x: window.innerWidth - rect.right,
     y: rect.bottom + 6,
   }
 }

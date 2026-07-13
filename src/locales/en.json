@@ -90,6 +90,10 @@
     "title": "Liked Songs"
   },
 
+  "enhancedPlaylist": {
+    "title": "Enhanced Songs"
+  },
+
   "queue": {
     "title": "Play Queue",
     "shuffled": "Shuffled",
@@ -327,6 +331,7 @@
     "confirmDelete": "Are you sure you want to delete this playlist?",
     "type": {
       "liked": "Liked Songs Playlist",
+      "enhanced": "Enhanced Songs Playlist",
       "playlist": "Playlist"
     },
     "play": "Play",
