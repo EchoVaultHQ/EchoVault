@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config"
+import vue from "@vitejs/plugin-vue"
 
 export default defineConfig({
   test: {
@@ -12,6 +13,7 @@ export default defineConfig({
         },
       },
       {
+        plugins: [vue()],
         test: {
           name: "frontend",
           environment: "jsdom",
@@ -23,7 +25,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/backend/**/*.js", "src/frontend/**/*.js", "src/main.js"],
+      include: ["src/backend/**/*.js", "src/frontend/**/*.{js,vue}", "src/main.js"],
       exclude: [
         "src/backend/**/*.test.js",
         "src/frontend/**/*.{test,spec}.js",

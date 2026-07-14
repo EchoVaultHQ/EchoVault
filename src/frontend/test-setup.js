@@ -46,7 +46,7 @@ function buildApiMock() {
     getArtistByName: vi.fn(),
     restoreWindowSize: vi.fn(),
     enableMiniPlayer: vi.fn(),
-    checkMiniMode: vi.fn(),
+    checkMiniMode: vi.fn(() => Promise.resolve(false)),
 
     // search
     searchTracks: vi.fn(),
