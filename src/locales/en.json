@@ -335,13 +335,27 @@
       "playlist": "Playlist"
     },
     "play": "Play",
-    "shuffle": "Shuffle"
+    "shuffle": "Shuffle",
+    "emptyTitle": "No songs yet",
+    "emptySubtext": "Add tracks from All Songs to build this playlist.",
+    "browseAllSongs": "Browse All Songs",
+    "coverPlaceholder": "Playlist cover",
+    "moreOptions": "More options",
+    "rename": "Rename",
+    "renameTitle": "Rename Playlist",
+    "delete": "Delete playlist"
   },
 
   "common": {
     "cancel": "Cancel",
     "create": "Create",
-    "back": "Back"
+    "back": "Back",
+    "save": "Save",
+    "close": "Close"
+  },
+  "trackList": {
+    "number": "#",
+    "title": "Title"
   },
 
   "enhance": {

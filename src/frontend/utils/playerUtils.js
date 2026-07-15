@@ -7,6 +7,14 @@ export function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
+export function formatTotalDuration(seconds) {
+  const totalMinutes = Math.round(seconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) return `${minutes}m`
+  return `${hours}h ${minutes}m`
+}
+
 // Volume Control
 export function useVolumeControl(player) {
   // Derived from the shared store, not a per-component default, so normal
@@ -44,8 +52,11 @@ export function useProgressBar(player) {
   const hoverTimeVisible = ref(false)
   const hoverTime = ref(0)
   const hoverX = ref(0)
+  const isDragging = ref(false)
+  let dragRect = null
 
   const showHoverTime = (event) => {
+    if (isDragging.value) return
     const bar = event.currentTarget
     const rect = bar.getBoundingClientRect()
     const ratio = (event.clientX - rect.left) / rect.width
@@ -55,6 +66,7 @@ export function useProgressBar(player) {
   }
 
   const hideHoverTime = () => {
+    if (isDragging.value) return
     hoverTimeVisible.value = false
   }
 
@@ -66,13 +78,50 @@ export function useProgressBar(player) {
     player.seekTo(targetTime)
   }
 
+  // Shared by drag-move — clamps to the bar's own rect captured at drag
+  // start, since mousemove targets whatever element the cursor is over,
+  // not necessarily the bar.
+  const seekToClientX = (clientX, rect) => {
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    player.seekTo(player.duration * ratio)
+    return ratio
+  }
+
+  const onDragMove = (event) => {
+    if (!dragRect) return
+    const ratio = seekToClientX(event.clientX, dragRect)
+    hoverX.value = ratio * dragRect.width
+    hoverTime.value = player.duration * ratio
+  }
+
+  const stopDrag = () => {
+    isDragging.value = false
+    hoverTimeVisible.value = false
+    dragRect = null
+    document.removeEventListener("mousemove", onDragMove)
+    document.removeEventListener("mouseup", stopDrag)
+  }
+
+  // mousedown covers both a plain click-to-seek (mousedown+mouseup with no
+  // movement already seeks) and a full drag.
+  const startDrag = (event) => {
+    dragRect = event.currentTarget.getBoundingClientRect()
+    isDragging.value = true
+    hoverTimeVisible.value = true
+    onDragMove(event)
+    document.addEventListener("mousemove", onDragMove)
+    document.addEventListener("mouseup", stopDrag)
+  }
+
   return {
     hoverTimeVisible,
     hoverTime,
     hoverX,
+    isDragging,
     showHoverTime,
     hideHoverTime,
     seek,
+    startDrag,
   }
 }
 

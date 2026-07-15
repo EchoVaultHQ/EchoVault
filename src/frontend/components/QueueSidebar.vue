@@ -194,19 +194,23 @@ watch(
 
 /* Queue header */
 .queue-header {
-  height: 55px;
+  height: 56px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 0 1.25rem;
   border-bottom: 1px solid var(--border-color);
-  background-color: var(--topbar-bg);
+  flex-shrink: 0;
 }
 
 .queue-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-text);
 }
 
 /* Queue header buttons */

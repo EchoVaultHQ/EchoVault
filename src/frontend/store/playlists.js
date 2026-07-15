@@ -38,5 +38,10 @@ export const usePlaylistsStore = defineStore("playlists", () => {
     await loadPlaylists(true)
   }
 
-  return { playlists, loading, loadPlaylists, createPlaylist, deletePlaylist }
+  async function renamePlaylist(id, name) {
+    await window.api.updatePlaylist(id, name)
+    await loadPlaylists(true)
+  }
+
+  return { playlists, loading, loadPlaylists, createPlaylist, deletePlaylist, renamePlaylist }
 })

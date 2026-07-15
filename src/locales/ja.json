@@ -337,13 +337,27 @@
       "playlist": "プレイリスト"
     },
     "play": "再生",
-    "shuffle": "シャッフル"
+    "shuffle": "シャッフル",
+    "emptyTitle": "曲がありません",
+    "emptySubtext": "「すべての曲」からトラックを追加してこのプレイリストを作りましょう。",
+    "browseAllSongs": "すべての曲を見る",
+    "coverPlaceholder": "プレイリストのカバー",
+    "moreOptions": "その他のオプション",
+    "rename": "名前を変更",
+    "renameTitle": "プレイリスト名を変更",
+    "delete": "プレイリストを削除"
   },
 
   "common": {
     "cancel": "キャンセル",
     "create": "作成",
-    "back": "戻る"
+    "back": "戻る",
+    "save": "保存",
+    "close": "閉じる"
+  },
+  "trackList": {
+    "number": "#",
+    "title": "タイトル"
   },
 
   "enhance": {

@@ -145,6 +145,48 @@ describe("useProgressBar", () => {
     seek(fakeBarEvent(100, { left: 0, width: 200 })) // ratio 0.5
     expect(player.seekTo).toHaveBeenLastCalledWith(100)
   })
+
+  describe("drag-to-seek", () => {
+    it("startDrag seeks immediately to the mousedown position and shows the tooltip", () => {
+      const player = fakePlayer({ duration: 200 })
+      const { isDragging, hoverTimeVisible, startDrag } = useProgressBar(player)
+
+      startDrag(fakeBarEvent(100, { left: 0, width: 200 })) // ratio 0.5
+      expect(player.seekTo).toHaveBeenLastCalledWith(100)
+      expect(isDragging.value).toBe(true)
+      expect(hoverTimeVisible.value).toBe(true)
+    })
+
+    it("moving the document-level mouse while dragging keeps seeking to the clamped ratio", () => {
+      const player = fakePlayer({ duration: 200 })
+      const { hoverTime, hoverX, startDrag } = useProgressBar(player)
+
+      startDrag(fakeBarEvent(0, { left: 0, width: 200 }))
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: 150 })) // ratio 0.75
+      expect(player.seekTo).toHaveBeenLastCalledWith(150)
+      expect(hoverTime.value).toBeCloseTo(150)
+      expect(hoverX.value).toBeCloseTo(150)
+
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: 500 })) // clamps to 1
+      expect(player.seekTo).toHaveBeenLastCalledWith(200)
+    })
+
+    it("mouseup stops dragging and hides the tooltip", () => {
+      const player = fakePlayer({ duration: 200 })
+      const { isDragging, hoverTimeVisible, startDrag } = useProgressBar(player)
+
+      startDrag(fakeBarEvent(0, { left: 0, width: 200 }))
+      document.dispatchEvent(new MouseEvent("mouseup"))
+
+      expect(isDragging.value).toBe(false)
+      expect(hoverTimeVisible.value).toBe(false)
+
+      // further document mousemoves are ignored once the drag has ended
+      player.seekTo.mockClear()
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: 150 }))
+      expect(player.seekTo).not.toHaveBeenCalled()
+    })
+  })
 })
 
 describe("usePlaybackControls", () => {

@@ -3,25 +3,29 @@
     <table class="track-table">
       <thead>
         <tr>
-          <th class="title-col">Title</th>
-          <th class="artist-col">Artist</th>
-          <th class="album-col">Album</th>
-          <th class="duration-col">Duration</th>
+          <th class="index-col">{{ t("trackList.number") }}</th>
+          <th class="title-col">{{ t("trackList.title") }}</th>
+          <th class="artist-col">{{ t("sort.artist") }}</th>
+          <th class="album-col">{{ t("sort.album") }}</th>
+          <th class="duration-col" :aria-label="t('sort.duration')"><Clock :size="14" /></th>
         </tr>
       </thead>
 
       <tbody>
-        <tr v-for="track in tracks" :key="track.id" class="track-row"
+        <tr v-for="(track, index) in tracks" :key="track.id" class="track-row"
           :class="{ playing: currentTrack?.file_path === track.file_path }" @click="$emit('select', track)">
+          <!-- Index / now-playing indicator -->
+          <td class="index-col">
+            <AudioLines v-if="currentTrack?.file_path === track.file_path" :size="16" class="playing-icon" />
+            <span v-else class="index-number">{{ index + 1 }}</span>
+          </td>
+
           <!-- Title + Cover -->
           <td class="title-col">
             <div class="track-info">
               <div class="cover-wrapper">
                 <img v-if="track.coverDataUrl" :src="track.coverDataUrl" class="track-cover" :alt="track.title" />
                 <img v-else src="../assets/images/default-cover.svg" class="track-cover" :alt="track.title" />
-                <div v-if="currentTrack?.file_path === track.file_path" class="cover-playing-overlay">
-                  <i class="fa-solid fa-play"></i>
-                </div>
               </div>
               <div class="track-title">{{ track.title }}</div>
             </div>
@@ -84,7 +88,7 @@ import { useI18n } from "vue-i18n"
 import { useEnhanceStore } from "../store/enhance.js"
 import { usePlayerStore } from "../store/player.js"
 import { useTrackLike } from "../utils/playerUtils.js"
-import { Ellipsis, Heart, Sparkles, ListPlus, ChevronRight, Trash2 } from "@lucide/vue"
+import { Ellipsis, Heart, Sparkles, ListPlus, ChevronRight, Trash2, AudioLines, Clock } from "@lucide/vue"
 
 const { t } = useI18n()
 const enhanceStore = useEnhanceStore()
@@ -271,12 +275,23 @@ onUnmounted(() => {
 }
 
 /* Columns */
+.index-col {
+  width: 40px;
+  text-align: center;
+  color: var(--muted-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.playing-icon {
+  color: var(--accent);
+}
+
 .title-col {
-  width: 35%;
+  width: 33%;
 }
 
 .artist-col {
-  width: 22%;
+  width: 21%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -286,7 +301,7 @@ onUnmounted(() => {
 }
 
 .album-col {
-  width: 18%;
+  width: 17%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -373,18 +388,6 @@ onUnmounted(() => {
   height: 40px;
   object-fit: cover;
   border-radius: var(--radius-sm);
-}
-
-.cover-playing-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: var(--radius-sm);
-  color: #fff;
-  font-size: 14px;
 }
 
 .track-title {

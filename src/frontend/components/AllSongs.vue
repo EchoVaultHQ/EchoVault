@@ -13,14 +13,6 @@
           v-model:sortField="sortField"
           v-model:sortDirection="sortDirection"
         />
-        <button
-          class="toggle-btn"
-          :class="{ active: player.showLyricsPanel }"
-          :title="t('labels.showLyrics')"
-          @click="player.toggleLyricsPanel()"
-        >
-          <img :src="DesktopLyrics" class="lyrics-toggle-icon" alt="" />
-        </button>
         <div class="view-toggle">
           <button
             :class="['toggle-btn', { active: viewMode === 'list' }]"
@@ -87,12 +79,11 @@ import { useEnhanceStore } from "../store/enhance.js"
 import { usePlaylistsStore } from "../store/playlists.js"
 import { useI18n } from "vue-i18n"
 import { Star, User, ListMusic } from "@lucide/vue"
-import { DesktopLyrics } from "../assets/icons/icons.js"
 import TrackList from "./TrackList.vue"
 import TrackGrid from "./TrackGrid.vue"
 import TrackSortControls from "./TrackSortControls.vue"
 import { useTrackSort } from "../utils/useTrackSort.js"
-import { formatTime } from "../utils/playerUtils.js"
+import { formatTime, formatTotalDuration } from "../utils/playerUtils.js"
 
 const { t } = useI18n()
 const router = useRouter()
@@ -115,14 +106,6 @@ const playlistCount = computed(() => playlists.value?.length || 0)
 const totalDurationSeconds = computed(() =>
   tracks.value.reduce((sum, t) => sum + (t.duration || 0), 0)
 )
-
-function formatTotalDuration(seconds) {
-  const totalMinutes = Math.round(seconds / 60)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours === 0) return `${minutes}m`
-  return `${hours}h ${minutes}m`
-}
 
 async function loadArtistCount() {
   const artists = await window.api.getArtists()
@@ -365,23 +348,4 @@ function playCurrentTrack(track) {
   color: white;
 }
 
-.lyrics-toggle-icon {
-  width: 16px;
-  height: 16px;
-  filter: invert(0%) brightness(0%);
-  opacity: 0.7;
-}
-
-:root[data-theme="dark"] .lyrics-toggle-icon {
-  filter: invert(100%) brightness(200%);
-}
-
-.toggle-btn:hover .lyrics-toggle-icon {
-  opacity: 1;
-}
-
-.toggle-btn.active .lyrics-toggle-icon {
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
 </style>

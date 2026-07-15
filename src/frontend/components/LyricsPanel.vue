@@ -1,6 +1,16 @@
 <template>
   <transition name="slide-fade">
     <div v-if="player.showLyricsPanel" class="lyrics-panel">
+      <div class="lyrics-panel-header">
+        <span class="lyrics-panel-title">{{ t("labels.showLyrics") }}</span>
+        <button
+          class="lyrics-close-btn"
+          :title="t('common.close')"
+          @click="player.toggleLyricsPanel()"
+        >
+          <X :size="18" />
+        </button>
+      </div>
       <div class="lyrics-panel-body">
         <div v-if="!player.currentTrack?.file_path" class="no-lyrics">
           {{ t('labels.noTrackSelected') }}
@@ -31,6 +41,7 @@
 
 <script setup>
 import { useI18n } from "vue-i18n"
+import { X } from "@lucide/vue"
 import { usePlayerStore } from "../store/player.js"
 import { useLyricsSync } from "../utils/playerUtils.js"
 
@@ -53,6 +64,46 @@ const { hasLyrics, plainLyricLines, visibleWindow } = useLyricsSync(player, 9)
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.lyrics-panel-header {
+  height: 56px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.lyrics-panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-text);
+}
+
+.lyrics-close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--muted-text);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.lyrics-close-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .lyrics-panel-body {

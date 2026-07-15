@@ -44,6 +44,37 @@ describe("TrackList.vue", () => {
     expect(wrapper.emitted("select")[0]).toEqual([t])
   })
 
+  describe("index column / now-playing indicator", () => {
+    it("shows the 1-based row number for tracks that aren't playing", () => {
+      const wrapper = mountList({
+        tracks: [track({ id: 1, file_path: "/a.flac" }), track({ id: 2, file_path: "/b.flac" })],
+        currentTrack: {},
+      })
+      const numbers = wrapper.findAll(".index-number").map((n) => n.text())
+      expect(numbers).toEqual(["1", "2"])
+    })
+
+    it("shows the playing icon instead of the number for the currently-playing row only", () => {
+      const wrapper = mountList({
+        tracks: [track({ id: 1, file_path: "/a.flac" }), track({ id: 2, file_path: "/b.flac" })],
+        currentTrack: { file_path: "/b.flac" },
+      })
+      const rows = wrapper.findAll(".track-row")
+      expect(rows[0].find(".playing-icon").exists()).toBe(false)
+      expect(rows[0].find(".index-number").text()).toBe("1")
+      expect(rows[1].find(".playing-icon").exists()).toBe(true)
+      expect(rows[1].find(".index-number").exists()).toBe(false)
+    })
+
+    it("no longer renders a cover-playing-overlay (replaced by the index-column icon)", () => {
+      const wrapper = mountList({
+        tracks: [track({ file_path: "/a.flac" })],
+        currentTrack: { file_path: "/a.flac" },
+      })
+      expect(wrapper.find(".cover-playing-overlay").exists()).toBe(false)
+    })
+  })
+
   describe("dropdown menu", () => {
     it("opens the menu for a track and closes it on a second click", async () => {
       const wrapper = mountList()

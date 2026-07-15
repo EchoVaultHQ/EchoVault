@@ -8,7 +8,7 @@
           <div class="create-icon">
             <i class="fa-solid fa-plus"></i>
           </div>
-          <h3>{{ t("playlist.create") }}</h3>
+            <h3>{{ t("playlist.create") }}</h3>
         </div>
       </div>
 
@@ -77,9 +77,8 @@
     <!-- Playlist Tracks View -->
     <div v-else class="playlist-view">
       <div class="playlist-view-header">
-        <button class="back-button" @click="router.push('/playlists')">
-          <i class="fa-solid fa-arrow-left"></i>
-          <span>{{ t("common.back") }}</span>
+        <button class="back-button" :title="t('common.back')" @click="router.push('/playlists')">
+          <ArrowLeft :size="20" />
         </button>
       </div>
 
@@ -100,7 +99,9 @@
             :src="currentPlaylistCover"
           />
           <div v-else class="hero-default-cover">
-            <i class="fa-solid fa-layer-group"></i>
+            <ImagePlus :size="36" />
+            <p class="cover-placeholder-title">{{ t("playlist.coverPlaceholder") }}</p>
+            <p class="cover-placeholder-sub">{{ t("home.browseFiles") }}</p>
           </div>
         </div>
         <div class="hero-info">
@@ -115,7 +116,7 @@
           </p>
           <h1>{{ currentPlaylistName }}</h1>
           <p class="playlist-meta">
-            {{ currentTracks.length }} {{ t("playlist.tracks") }}
+            {{ currentTracks.length }} {{ t("playlist.tracks") }} · {{ formattedTotalDuration }}
           </p>
           <div class="hero-actions">
             <button
@@ -134,29 +135,61 @@
               <Shuffle :size="18" />
               <span>{{ t("playlist.shuffle") }}</span>
             </button>
+            <div
+              v-if="selectedPlaylist !== 'liked' && selectedPlaylist !== 'enhanced'"
+              class="hero-more"
+            >
+              <button
+                class="more-options-btn"
+                :title="t('playlist.moreOptions')"
+                @click.stop="heroMenuOpen = !heroMenuOpen"
+              >
+                <Ellipsis :size="18" />
+              </button>
+              <div v-if="heroMenuOpen" class="hero-menu">
+                <div class="dropdown-item" @click="openRenameDialog">
+                  <PencilLine :size="16" /><span>{{ t("playlist.rename") }}</span>
+                </div>
+                <div class="dropdown-item danger" @click="deletePlaylist(selectedPlaylist)">
+                  <Trash2 :size="16" /><span>{{ t("playlist.delete") }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="playlist-tracks">
-        <TrackSortControls
-          v-model:sortField="sortField"
-          v-model:sortDirection="sortDirection"
-        />
-        <TrackList
-          :tracks="sortedTracks"
-          :currentTrack="player.currentTrack"
-          :formatDuration="formatTime"
-          :playlists="playlists"
-          :currentPlaylistId="
-            selectedPlaylist !== 'liked' && selectedPlaylist !== 'enhanced'
-              ? selectedPlaylist
-              : null
-          "
-          @select="playTrack"
-          @add-to-playlist="handleAddToPlaylist"
-          @remove-from-playlist="handleRemoveFromPlaylist"
-        />
+        <div v-if="!sortedTracks.length" class="playlist-empty-state">
+          <ListMusic :size="48" class="empty-icon" />
+          <h2>{{ t("playlist.emptyTitle") }}</h2>
+          <p>{{ t("playlist.emptySubtext") }}</p>
+          <button class="accent-btn" @click="router.push('/songs')">
+            {{ t("playlist.browseAllSongs") }}
+          </button>
+        </div>
+        <template v-else>
+          <div class="tracks-toolbar">
+            <TrackSortControls
+              v-model:sortField="sortField"
+              v-model:sortDirection="sortDirection"
+            />
+          </div>
+          <TrackList
+            :tracks="sortedTracks"
+            :currentTrack="player.currentTrack"
+            :formatDuration="formatTime"
+            :playlists="playlists"
+            :currentPlaylistId="
+              selectedPlaylist !== 'liked' && selectedPlaylist !== 'enhanced'
+                ? selectedPlaylist
+                : null
+            "
+            @select="playTrack"
+            @add-to-playlist="handleAddToPlaylist"
+            @remove-from-playlist="handleRemoveFromPlaylist"
+          />
+        </template>
       </div>
     </div>
 
@@ -190,21 +223,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Rename Dialog -->
+    <div
+      v-if="showRenameDialog"
+      class="dialog-overlay"
+      @click.self="cancelRename"
+    >
+      <div class="dialog">
+        <h2>{{ t("playlist.renameTitle") }}</h2>
+        <input
+          ref="renameInput"
+          v-model="renamePlaylistName"
+          type="text"
+          @keyup.enter="confirmRename"
+          @keyup.esc="cancelRename"
+        />
+        <div class="dialog-actions">
+          <button class="btn-secondary" @click="cancelRename">
+            {{ t("common.cancel") }}
+          </button>
+          <button
+            class="btn-primary"
+            @click="confirmRename"
+            :disabled="!renamePlaylistName.trim()"
+          >
+            {{ t("common.save") }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { storeToRefs } from "pinia"
-import { Play, Shuffle, Sparkles } from "@lucide/vue"
+import { Play, Shuffle, Sparkles, ListMusic, ImagePlus, Ellipsis, PencilLine, Trash2, ArrowLeft } from "@lucide/vue"
 import { usePlayerStore } from "../store/player.js"
 import { usePlaylistsStore } from "../store/playlists.js"
 import { useEnhanceStore } from "../store/enhance.js"
 import TrackList from "./TrackList.vue"
 import TrackSortControls from "./TrackSortControls.vue"
 import { useTrackSort } from "../utils/useTrackSort.js"
-import { formatTime } from "../utils/playerUtils.js"
+import { formatTime, formatTotalDuration } from "../utils/playerUtils.js"
 import { useI18n } from "vue-i18n"
 
 const { t } = useI18n()
@@ -222,6 +285,10 @@ const playlistTracks = ref({})
 const showCreateDialog = ref(false)
 const newPlaylistName = ref("")
 const nameInput = ref(null)
+const heroMenuOpen = ref(false)
+const showRenameDialog = ref(false)
+const renamePlaylistName = ref("")
+const renameInput = ref(null)
 
 // Load liked tracks
 async function loadLikedTracks() {
@@ -348,6 +415,24 @@ async function deletePlaylist(id) {
   }
 }
 
+// rename a playlist
+function openRenameDialog() {
+  renamePlaylistName.value = currentPlaylistName.value
+  showRenameDialog.value = true
+  heroMenuOpen.value = false
+}
+
+function cancelRename() {
+  showRenameDialog.value = false
+  renamePlaylistName.value = ""
+}
+
+async function confirmRename() {
+  if (!renamePlaylistName.value.trim()) return
+  await playlistsStore.renamePlaylist(selectedPlaylist.value, renamePlaylistName.value.trim())
+  showRenameDialog.value = false
+}
+
 // Current tracks and playlist info
 const currentTracks = computed(() => {
   if (selectedPlaylist.value === "liked") {
@@ -363,6 +448,11 @@ const { sortField, sortDirection, sortedTracks } = useTrackSort(
   currentTracks,
   "echovault-sort-playlist"
 )
+
+const totalDurationSeconds = computed(() =>
+  currentTracks.value.reduce((sum, t) => sum + (t.duration || 0), 0)
+)
+const formattedTotalDuration = computed(() => formatTotalDuration(totalDurationSeconds.value))
 
 const currentPlaylistName = computed(() => {
   if (selectedPlaylist.value === "liked") return t("liked.title")
@@ -423,6 +513,17 @@ watch(showCreateDialog, async (newVal) => {
   }
 })
 
+watch(showRenameDialog, async (newVal) => {
+  if (newVal) {
+    await nextTick()
+    renameInput.value?.focus()
+  }
+})
+
+function closeHeroMenu() {
+  heroMenuOpen.value = false
+}
+
 watch(() => player.likedUpdated, loadLikedTracks)
 watch(() => enhanceStore.completedCount, loadEnhancedTracks)
 
@@ -438,6 +539,11 @@ onMounted(() => {
   loadLikedTracks()
   loadEnhancedTracks()
   playlistsStore.loadPlaylists()
+  document.addEventListener("click", closeHeroMenu)
+})
+
+onUnmounted(() => {
+  document.removeEventListener("click", closeHeroMenu)
 })
 </script>
 
@@ -602,15 +708,44 @@ onMounted(() => {
 }
 
 .playlist-view-header {
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--topbar-bg);
+  display: flex;
+  align-items: center;
+  padding: 1.75rem 2rem 0.5rem 2rem;
 }
 
-/* fav icons */
+.back-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--muted-text);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.back-button:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.back-button:active {
+  transform: scale(0.92);
+}
+
+.back-button svg {
+  stroke-width: 2;
+}
+
+/* fav icons (grid view) */
 i.fa-plus,
-.fa-trash,
-.fa-arrow-left {
+.fa-trash {
   font-size: 24px;
   color: currentColor;
 }
@@ -619,36 +754,6 @@ i.fa-plus,
 .fa-music {
   font-size: 48px; /* adjust to your container */
   color: currentColor; /* inherits text color */
-}
-
-.fa-arrow-left {
-  transform: translateX(-3px);
-  transition: transform 0.15s ease;
-}
-
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-color);
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: var(--hover-bg);
-  border-color: var(--accent);
-}
-
-.back-button svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 2;
 }
 
 /* Playlist Hero */
@@ -716,17 +821,31 @@ i.fa-plus,
 .hero-default-cover {
   width: 100%;
   height: 100%;
-  background: var(--topbar-bg);
+  background: transparent;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   color: var(--muted-text);
 }
 
 .hero-default-cover svg {
-  width: 80px;
-  height: 80px;
   stroke-width: 1.5;
+}
+
+.cover-placeholder-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.cover-placeholder-sub {
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.8;
 }
 
 .hero-info {
@@ -807,9 +926,103 @@ i.fa-plus,
   cursor: not-allowed;
 }
 
+.hero-more {
+  position: relative;
+}
+
+.more-options-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--hover-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.more-options-btn:hover {
+  background: var(--border-color);
+}
+
+.hero-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: var(--side-nav-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 20;
+}
+
+.hero-menu .dropdown-item {
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.hero-menu .dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.hero-menu .dropdown-item.danger {
+  color: #ff4a4a;
+}
+
 /* Playlist Tracks */
 .playlist-tracks {
   padding: 2rem;
+}
+
+.tracks-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+.tracks-toolbar :deep(.sort-controls) {
+  margin-bottom: 0;
+}
+
+.playlist-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  gap: 0.75rem;
+}
+
+.playlist-empty-state .empty-icon {
+  color: var(--muted-text);
+  opacity: 0.4;
+  margin-bottom: 0.5rem;
+}
+
+.playlist-empty-state h2 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.25rem;
+}
+
+.playlist-empty-state p {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 0.95rem;
+}
+
+.playlist-empty-state .accent-btn {
+  margin-top: 0.5rem;
 }
 
 /* Dialog */

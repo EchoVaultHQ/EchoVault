@@ -1,28 +1,32 @@
 <template>
   <div class="playerbar-wrapper">
     <!-- === PROGRESS BAR === -->
-    <div
-      class="progress-bar"
-      @click="seek($event)"
-      @mousemove="showHoverTime($event)"
-      @mouseleave="hideHoverTime"
-    >
+    <div class="progress-bar-row">
+      <span class="time-label time-elapsed">{{ formatTime(player.currentTime) }}</span>
       <div
-        class="progress-fill"
-        :style="{ width: `${player.progress * 100}%` }"
-      ></div>
-      <div
-        v-if="hoverTimeVisible"
-        class="progress-cursor-dot"
-        :style="{ left: hoverX + 'px' }"
-      ></div>
-      <div
-        v-if="hoverTimeVisible"
-        class="hover-time"
-        :style="{ left: hoverX + 'px' }"
+        class="progress-bar"
+        :class="{ dragging: isDragging }"
+        @mousedown="startDrag($event)"
+        @mousemove="showHoverTime($event)"
+        @mouseleave="hideHoverTime"
       >
-        {{ formatTime(hoverTime) }}
+        <div class="progress-track">
+          <div
+            class="progress-fill"
+            :style="{ width: `${player.progress * 100}%` }"
+          >
+            <div class="progress-thumb"></div>
+          </div>
+        </div>
+        <div
+          v-if="hoverTimeVisible"
+          class="hover-time"
+          :style="{ left: hoverX + 'px' }"
+        >
+          {{ formatTime(hoverTime) }}
+        </div>
       </div>
+      <span class="time-label time-remaining">-{{ formatTime(player.duration - player.currentTime) }}</span>
     </div>
 
     <footer class="player-bar" :style="playerBarStyle">
@@ -135,6 +139,14 @@
               :fill="player.currentTrack?.isLiked ? 'currentColor' : 'none'"
             />
           </button>
+          <button
+            @click="player.toggleLyricsPanel()"
+            class="icon-btn"
+            :class="{ active: player.showLyricsPanel }"
+            :title="t('labels.showLyrics')"
+          >
+            <Captions :size="17" />
+          </button>
         </div>
 
         <div class="volume">
@@ -183,6 +195,7 @@ import {
   Maximize2,
   Minimize2,
   Cast,
+  Captions,
 } from "@lucide/vue"
 
 import {
@@ -223,9 +236,10 @@ const {
   hoverTimeVisible,
   hoverTime,
   hoverX,
+  isDragging,
   showHoverTime,
   hideHoverTime,
-  seek,
+  startDrag,
 } = useProgressBar(player)
 const { togglePlay, playPreviousTrack, playNextTrack } =
   usePlaybackControls(player)
@@ -289,33 +303,75 @@ const playerBarStyle = computed(() => {
 }
 
 /* Playback progress bar */
+.progress-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 10px;
+}
+
+.time-label {
+  font-size: 0.7rem;
+  color: var(--muted-text);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  flex-shrink: 0;
+}
+
+.time-elapsed {
+  text-align: right;
+}
+
 .progress-bar {
   position: relative;
-  height: 4px;
-  border-radius: 4px;
-  background: var(--border-color);
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
-  margin: 0 10px 10px;
+}
+
+.progress-track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--border-color);
+  transition: height 0.15s ease;
+}
+
+.progress-bar:hover .progress-track,
+.progress-bar.dragging .progress-track {
+  height: 6px;
 }
 
 .progress-fill {
+  position: relative;
   height: 100%;
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--accent);
   transition: width 0.1s linear;
+  filter: drop-shadow(0 0 4px var(--accent));
 }
 
-.progress-cursor-dot {
+.progress-thumb {
   position: absolute;
   top: 50%;
+  right: 0;
   width: 12px;
   height: 12px;
-  background: white;
+  background: var(--accent);
+  border: 2px solid white;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(50%, -50%) scale(0);
+  transition: transform 0.15s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  z-index: 2;
   pointer-events: none;
+}
+
+.progress-bar:hover .progress-thumb,
+.progress-bar.dragging .progress-thumb {
+  transform: translate(50%, -50%) scale(1);
 }
 
 .hover-time {
@@ -495,6 +551,7 @@ const playerBarStyle = computed(() => {
 .toggle-shuffle.active,
 .icon-btn.all,
 .icon-btn.one,
+.icon-btn.active,
 .like-btn.is-liked {
   color: var(--accent);
   opacity: 1;

@@ -149,11 +149,59 @@ describe("PlayerBar.vue", () => {
     })
   })
 
+  describe("progress bar", () => {
+    it("shows elapsed and remaining time labels", async () => {
+      const wrapper = await mountBar()
+      const player = usePlayerStore()
+      player.duration = 200
+      player.currentTime = 50
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find(".time-elapsed").text()).toBe("0:50")
+      expect(wrapper.find(".time-remaining").text()).toBe("-2:30")
+    })
+
+    it("mousedown on the bar seeks and enters dragging state", async () => {
+      const wrapper = await mountBar()
+      const player = usePlayerStore()
+      const seekSpy = vi.spyOn(player, "seekTo")
+      player.duration = 200
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+        left: 0,
+        width: 200,
+      })
+
+      const bar = wrapper.find(".progress-bar")
+      await bar.trigger("mousedown", { clientX: 100 })
+
+      expect(seekSpy).toHaveBeenCalledWith(100)
+      expect(bar.classes()).toContain("dragging")
+    })
+  })
+
   describe("cover tint", () => {
     it("falls back to the default (no-tint) style when extractCoverColor resolves null", async () => {
       const wrapper = await mountBar()
       const bar = wrapper.find(".player-bar")
       expect(bar.attributes("style")).toContain("--cover-tint-opacity: 0")
+    })
+  })
+
+  describe("lyrics toggle", () => {
+    it("toggles player.showLyricsPanel and reflects the active state", async () => {
+      const wrapper = await mountBar()
+      const player = usePlayerStore()
+      const toggleSpy = vi.spyOn(player, "toggleLyricsPanel")
+      const buttons = wrapper.findAll(".track-utils button")
+      const lyricsBtn = buttons[buttons.length - 1]
+
+      expect(lyricsBtn.classes()).not.toContain("active")
+      await lyricsBtn.trigger("click")
+      expect(toggleSpy).toHaveBeenCalledOnce()
+
+      player.showLyricsPanel = true
+      await wrapper.vm.$nextTick()
+      expect(lyricsBtn.classes()).toContain("active")
     })
   })
 

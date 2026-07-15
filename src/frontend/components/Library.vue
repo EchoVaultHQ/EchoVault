@@ -7,14 +7,6 @@
           <i class="fa-solid fa-arrow-left"></i>
           <span>{{ t("common.back") }}</span>
         </button>
-        <button
-          class="lyrics-toggle-button"
-          :class="{ active: player.showLyricsPanel }"
-          :title="t('labels.showLyrics')"
-          @click="player.toggleLyricsPanel()"
-        >
-          <img :src="DesktopLyrics" class="lyrics-toggle-icon" alt="" />
-        </button>
       </div>
 
       <div class="album-hero">
@@ -243,7 +235,6 @@ import { useI18n } from "vue-i18n"
 import { useRoute, useRouter } from "vue-router"
 import { storeToRefs } from "pinia"
 import { Play, Shuffle } from "@lucide/vue"
-import { DesktopLyrics } from "../assets/icons/icons.js"
 import { usePlayerStore } from "../store/player.js"
 import { usePlaylistsStore } from "../store/playlists.js"
 import { attachCoverUrl } from "../utils/trackFormat.js"
@@ -760,47 +751,6 @@ onMounted(async () => {
   top: -1rem;
   z-index: 5;
   background: var(--content-bg);
-}
-
-.lyrics-toggle-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.75rem;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.lyrics-toggle-button:hover {
-  background: var(--hover-bg);
-  border-color: var(--accent);
-}
-
-.lyrics-toggle-button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.lyrics-toggle-icon {
-  width: 16px;
-  height: 16px;
-  filter: invert(0%) brightness(0%);
-  opacity: 0.7;
-}
-
-:root[data-theme="dark"] .lyrics-toggle-icon {
-  filter: invert(100%) brightness(200%);
-}
-
-.lyrics-toggle-button:hover .lyrics-toggle-icon {
-  opacity: 1;
-}
-
-.lyrics-toggle-button.active .lyrics-toggle-icon {
-  filter: brightness(0) invert(1);
-  opacity: 1;
 }
 
 .back-button {

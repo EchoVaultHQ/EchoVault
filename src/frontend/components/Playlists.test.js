@@ -45,6 +45,92 @@ describe("Playlists.vue", () => {
     window.api.getPlaylistTracks.mockResolvedValue([])
   })
 
+  describe("cover placeholder", () => {
+    it("shows the dashed cover placeholder when the playlist has no cover", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      const playlistsStore = usePlaylistsStore()
+      playlistsStore.playlists = [{ id: 42, name: "Roadtrip", coverUrl: null }]
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find(".cover-placeholder-title").exists()).toBe(true)
+      expect(wrapper.find(".hero-cover-image").exists()).toBe(false)
+    })
+
+    it("shows the real cover image instead of the placeholder when one exists", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      const playlistsStore = usePlaylistsStore()
+      playlistsStore.playlists = [{ id: 42, name: "Roadtrip", coverUrl: "echovault:///x.jpg" }]
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find(".cover-placeholder-title").exists()).toBe(false)
+      expect(wrapper.find(".hero-cover-image").exists()).toBe(true)
+    })
+  })
+
+  describe("playlist-meta duration", () => {
+    it("shows track count and total duration formatted as Xh Ym / Xm", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([
+        track({ id: 1, duration: 60 }),
+        track({ id: 2, duration: 120 }),
+      ])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      expect(wrapper.find(".playlist-meta").text()).toBe("2 tracks · 3m")
+    })
+  })
+
+  describe("more options menu", () => {
+    it("is hidden for the liked/enhanced pseudo-playlists", async () => {
+      const { wrapper } = await mountPlaylists("/playlists/liked")
+      expect(wrapper.find(".hero-more").exists()).toBe(false)
+    })
+
+    it("opens on click for a real playlist and lists rename + delete", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      await wrapper.find(".more-options-btn").trigger("click")
+
+      expect(wrapper.find(".hero-menu").exists()).toBe(true)
+      const labels = wrapper.findAll(".hero-menu .dropdown-item").map((n) => n.text())
+      expect(labels).toEqual(["Rename", "Delete playlist"])
+    })
+
+    it("clicking Delete reuses the existing deletePlaylist flow", async () => {
+      vi.spyOn(window, "confirm").mockReturnValue(true)
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      const playlistsStore = usePlaylistsStore()
+      const deleteSpy = vi.spyOn(playlistsStore, "deletePlaylist").mockResolvedValue(undefined)
+
+      await wrapper.find(".more-options-btn").trigger("click")
+      await wrapper.find(".hero-menu .dropdown-item.danger").trigger("click")
+
+      expect(deleteSpy).toHaveBeenCalledWith("42")
+    })
+
+    it("clicking Rename opens a dialog pre-filled with the current name, and confirming renames it", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
+      const { wrapper } = await mountPlaylists("/playlists/42")
+      const playlistsStore = usePlaylistsStore()
+      playlistsStore.playlists = [{ id: 42, name: "Roadtrip", coverUrl: null }]
+      await wrapper.vm.$nextTick()
+      const renameSpy = vi.spyOn(playlistsStore, "renamePlaylist").mockResolvedValue(undefined)
+
+      await wrapper.find(".more-options-btn").trigger("click")
+      await wrapper.find(".hero-menu .dropdown-item:not(.danger)").trigger("click")
+
+      expect(wrapper.vm.showRenameDialog).toBe(true)
+      expect(wrapper.vm.renamePlaylistName).toBe("Roadtrip")
+
+      wrapper.vm.renamePlaylistName = "Night Drive"
+      await wrapper.vm.confirmRename()
+
+      expect(renameSpy).toHaveBeenCalledWith("42", "Night Drive")
+      expect(wrapper.vm.showRenameDialog).toBe(false)
+    })
+  })
+
   describe("coverDataUrl branch (via loadLikedTracks)", () => {
     it("builds echovault:// urls for absolute/relative covers, and null for no cover", async () => {
       window.api.getLikedTracks.mockResolvedValue([
@@ -193,6 +279,7 @@ describe("Playlists.vue", () => {
     })
 
     it("does not reload the currently-viewed tracks when adding to a different playlist", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
       const { wrapper } = await mountPlaylists("/playlists/42")
       const playlistsStore = usePlaylistsStore()
       vi.spyOn(playlistsStore, "loadPlaylists").mockResolvedValue(undefined)
@@ -207,6 +294,7 @@ describe("Playlists.vue", () => {
     })
 
     it("removing always reloads that playlist's tracks and the playlists list", async () => {
+      window.api.getPlaylistTracks.mockResolvedValue([track({ id: 1 })])
       const { wrapper } = await mountPlaylists("/playlists/42")
       const playlistsStore = usePlaylistsStore()
       const loadSpy = vi.spyOn(playlistsStore, "loadPlaylists").mockResolvedValue(undefined)

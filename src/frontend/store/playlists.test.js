@@ -83,4 +83,15 @@ describe("usePlaylistsStore", () => {
       expect(window.api.getPlaylists).toHaveBeenCalledOnce()
     })
   })
+
+  describe("renamePlaylist", () => {
+    it("renames a playlist then force-reloads the list", async () => {
+      window.api.updatePlaylist.mockResolvedValue(undefined)
+      window.api.getPlaylists.mockResolvedValue([{ id: 3, name: "New Name", cover: null }])
+      const store = usePlaylistsStore()
+      await store.renamePlaylist(3, "New Name")
+      expect(window.api.updatePlaylist).toHaveBeenCalledWith(3, "New Name")
+      expect(window.api.getPlaylists).toHaveBeenCalledOnce()
+    })
+  })
 })
