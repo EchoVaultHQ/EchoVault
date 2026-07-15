@@ -7,10 +7,10 @@
   --text-color: #e5e5e5;
   --muted-text: #a0a0a0;
 
-  /* Accent — default purple, single fixed choice (no picker on landing page) */
-  --accent: #8e44ad;
-  --accent-hover: #9b59b6;
-  --hover-bg: rgba(142, 68, 173, 0.25);
+  /* Accent — default cyan/blue, matches app icon (single fixed choice, no picker on landing page) */
+  --accent: #25b4d2;
+  --accent-hover: #03aae1;
+  --hover-bg: rgba(37, 180, 210, 0.25);
 
   /* Glass */
   --glass-bg: color-mix(in srgb, var(--bg-color) 55%, transparent);
