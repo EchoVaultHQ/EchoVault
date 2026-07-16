@@ -1,11 +1,16 @@
+import path from "node:path"
 import { dialog, ipcMain } from "electron"
-import { scanFolder } from "./scanner.js"
+import { scanFolder, countAudioFiles } from "./scanner.js"
 import { watchFolders } from "./watcher.js"
+import { promoteLocationOrDeleteTrack, mergeMetadataDuplicates } from "./trackDedupe.js"
 import {
   GET_FOLDERS_WITH_TRACK_COUNT,
   DELETE_FOLDER,
   CLEAN_ORPHAN_TRACKS,
+  CLEAN_ORPHAN_TRACK_LOCATIONS,
   GET_FOLDER_PATHS,
+  GET_FOLDER_ID_BY_PATH,
+  GET_TRACK_PATHS_BY_FOLDER,
   DELETE_ARTIST_WITHOUT_TRACKS,
   INCREMENT_PLAY_COUNT,
   GET_TOP_PLAYED_TRACKS,
@@ -22,7 +27,26 @@ export async function addFolder(mainWindow, db) {
   })
   if (result.canceled) return db.prepare(GET_FOLDERS_WITH_TRACK_COUNT).all()
 
-  for (const folder of result.filePaths) await scanFolder(db, folder)
+  const send = (channel, payload) => {
+    if (!mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload)
+  }
+  const total = result.filePaths.reduce((sum, folder) => sum + countAudioFiles(folder), 0)
+  let current = 0
+
+  for (const folder of result.filePaths) {
+    await scanFolder(db, folder, ({ filePath }) => {
+      current++
+      send("library:scan-progress", {
+        phase: "add",
+        current,
+        total,
+        pct: total ? Math.min(100, Math.round((current / total) * 100)) : 0,
+        message: path.basename(filePath),
+        folderPath: folder,
+      })
+    })
+  }
+  mergeMetadataDuplicates(db)
   watchFolders(db)
 
   return db.prepare(GET_FOLDERS_WITH_TRACK_COUNT).all()
@@ -33,8 +57,18 @@ export function getFolders(db) {
 }
 
 export function removeFolder(db, folderPath) {
+  // Promote any track whose primary copy lives in this folder to a
+  // surviving location elsewhere *before* deleting the folder - DELETE_FOLDER
+  // cascades to tracks/track_locations immediately, so this must run first.
+  const folder = db.prepare(GET_FOLDER_ID_BY_PATH).get(folderPath)
+  if (folder) {
+    const paths = db.prepare(GET_TRACK_PATHS_BY_FOLDER).all(folder.id).map((t) => t.file_path)
+    for (const p of paths) promoteLocationOrDeleteTrack(db, p)
+  }
+
   db.prepare(DELETE_FOLDER).run(folderPath)
   db.prepare(CLEAN_ORPHAN_TRACKS).run()
+  db.prepare(CLEAN_ORPHAN_TRACK_LOCATIONS).run()
   // clean up empty artists
   db.prepare(DELETE_ARTIST_WITHOUT_TRACKS).run()
 
@@ -42,9 +76,29 @@ export function removeFolder(db, folderPath) {
   return db.prepare(GET_FOLDERS_WITH_TRACK_COUNT).all()
 }
 
-export async function rescanLibrary(db) {
+export async function rescanLibrary(mainWindow, db) {
   const folders = db.prepare(GET_FOLDER_PATHS).all()
-  for (const { path } of folders) await scanFolder(db, path)
+
+  const send = (channel, payload) => {
+    if (!mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload)
+  }
+  const total = folders.reduce((sum, { path: folderPath }) => sum + countAudioFiles(folderPath), 0)
+  let current = 0
+
+  for (const { path: folderPath } of folders) {
+    await scanFolder(db, folderPath, ({ filePath }) => {
+      current++
+      send("library:scan-progress", {
+        phase: "rescan",
+        current,
+        total,
+        pct: total ? Math.min(100, Math.round((current / total) * 100)) : 0,
+        message: path.basename(filePath),
+        folderPath,
+      })
+    })
+  }
+  mergeMetadataDuplicates(db)
   watchFolders(db)
   return db.prepare(GET_FOLDERS_WITH_TRACK_COUNT).all()
 }
@@ -160,7 +214,7 @@ export function registerLibraryHandlers(mainWindow, db) {
   ipcMain.handle("library:remove-folder", (e, folderPath) => removeFolder(db, folderPath))
 
   // rescan
-  ipcMain.handle("library:rescan-library", () => rescanLibrary(db))
+  ipcMain.handle("library:rescan-library", () => rescanLibrary(mainWindow, db))
 
   // last scanned (global, across all folders)
   ipcMain.handle("library:get-last-scanned", () => getLastScanned(db))

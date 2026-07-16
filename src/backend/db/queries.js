@@ -41,9 +41,9 @@ export const GET_TRACK_BY_ID = `SELECT * FROM tracks WHERE id=?`
 export const GET_TRACK_BY_PATH = `SELECT * FROM tracks WHERE file_path=?`
 export const UPSERT_TRACK = `
   INSERT INTO tracks (
-    folder_id, artist_id, file_path, title, album, artist, duration, cover, file_size
+    folder_id, artist_id, file_path, title, album, artist, duration, cover, file_size, content_hash
   )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(file_path) DO UPDATE SET
     folder_id=excluded.folder_id,
     artist_id=excluded.artist_id,
@@ -52,7 +52,59 @@ export const UPSERT_TRACK = `
     artist=excluded.artist,
     duration=excluded.duration,
     cover=excluded.cover,
-    file_size=excluded.file_size
+    file_size=excluded.file_size,
+    content_hash=excluded.content_hash
+`
+
+//  Track dedup / locations
+export const GET_TRACK_BY_HASH = `
+  SELECT * FROM tracks WHERE content_hash = ? ORDER BY id ASC LIMIT 1
+`
+export const GET_OTHER_TRACK_BY_HASH = `
+  SELECT * FROM tracks WHERE content_hash = ? AND id != ? ORDER BY id ASC LIMIT 1
+`
+export const UPDATE_TRACK_HASH = `
+  UPDATE tracks SET content_hash = ? WHERE file_path = ?
+`
+export const DELETE_TRACK_BY_ID = `DELETE FROM tracks WHERE id = ?`
+
+export const INSERT_TRACK_LOCATION = `
+  INSERT OR IGNORE INTO track_locations (track_id, folder_id, file_path, file_size)
+  VALUES (?, ?, ?, ?)
+`
+export const GET_LOCATION_BY_PATH = `
+  SELECT * FROM track_locations WHERE file_path = ?
+`
+export const DELETE_TRACK_LOCATION_BY_PATH = `
+  DELETE FROM track_locations WHERE file_path = ?
+`
+export const DELETE_TRACK_LOCATION_BY_ID = `
+  DELETE FROM track_locations WHERE id = ?
+`
+export const GET_ONE_LOCATION_BY_TRACK = `
+  SELECT * FROM track_locations WHERE track_id = ? LIMIT 1
+`
+export const REPOINT_TRACK_LOCATIONS = `
+  UPDATE track_locations SET track_id = ? WHERE track_id = ?
+`
+export const PROMOTE_LOCATION_TO_PRIMARY = `
+  UPDATE tracks SET folder_id = ?, file_path = ?, file_size = ? WHERE id = ?
+`
+export const CLEAN_ORPHAN_TRACK_LOCATIONS = `
+  DELETE FROM track_locations WHERE folder_id NOT IN (SELECT id FROM folders)
+`
+export const REPOINT_PLAYLIST_TRACKS = `
+  INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, added_at)
+  SELECT playlist_id, ?, added_at FROM playlist_tracks WHERE track_id = ?
+`
+export const UPDATE_TRACK_MERGED_STATS = `
+  UPDATE tracks SET noOfPlays = ?, isLiked = ?, isEnhanced = ?, last_played_at = ? WHERE id = ?
+`
+export const GET_METADATA_DUPLICATE_GROUPS = `
+  SELECT GROUP_CONCAT(id) as ids
+  FROM tracks
+  GROUP BY LOWER(TRIM(title)), LOWER(TRIM(album)), artist_id
+  HAVING COUNT(*) > 1
 `
 // queries
 

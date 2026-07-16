@@ -10,6 +10,11 @@ contextBridge.exposeInMainWorld("api", {
   removeFolder: (path) => ipcRenderer.invoke("library:remove-folder", path),
   rescanLibrary: () => ipcRenderer.invoke("library:rescan-library"),
   getLastScannedAt: () => ipcRenderer.invoke("library:get-last-scanned"),
+  onLibraryScanProgress: (cb) => {
+    const handler = (_e, data) => cb(data)
+    ipcRenderer.on("library:scan-progress", handler)
+    return () => ipcRenderer.removeListener("library:scan-progress", handler)
+  },
 
   // tracks
   getTracks: () => ipcRenderer.invoke("tracks:get-tracks"),

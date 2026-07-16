@@ -67,6 +67,8 @@
     "tracksHeader": "Tracks",
     "sizeHeader": "Size",
     "scanning": "Scanning...",
+    "scanningProgress": "Scanning {current}/{total}",
+    "scanningPreparing": "Preparing scan…",
     "rescanComplete": "Library rescanned successfully!"
   },
 

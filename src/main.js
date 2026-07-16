@@ -6,6 +6,8 @@ import started from "electron-squirrel-startup"
 import log from "electron-log/main"
 import { initDB } from "./backend/db/index.js"
 import { registerAllHandlers } from "./backend/main/ipcHandlers.js"
+import { watchFolders } from "./backend/main/watcher.js"
+import { mergeMetadataDuplicates } from "./backend/main/trackDedupe.js"
 import { destroyTray } from "./backend/main/tray.js"
 import { parseRange } from "./backend/utils/httpRange.js"
 
@@ -253,6 +255,8 @@ app.whenReady().then(() => {
   const db = initDB()
   createWindow()
   registerAllHandlers(mainWindow, db)
+  mergeMetadataDuplicates(db)
+  watchFolders(db)
 })
 
 app.on("window-all-closed", () => {

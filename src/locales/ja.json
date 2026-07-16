@@ -67,6 +67,8 @@
     "tracksHeader": "曲数",
     "sizeHeader": "サイズ",
     "scanning": "スキャン中...",
+    "scanningProgress": "スキャン中 {current}/{total}",
+    "scanningPreparing": "スキャンを準備中…",
     "rescanComplete": "ライブラリの再スキャンが完了しました！"
   },
 

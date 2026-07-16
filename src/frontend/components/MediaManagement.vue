@@ -38,8 +38,8 @@
           </button>
         </div>
 
-        <button class="btn-outline" @click="rescanLibrary" :disabled="isRescanning">
-          <span v-if="!isRescanning">
+        <button class="btn-outline" @click="rescanLibrary" :disabled="scanStore.isScanning">
+          <span v-if="!scanStore.isScanning">
             <i class="fas fa-sync-alt"></i> {{ t("home.rescan") }}
           </span>
           <span v-else class="scanning">
@@ -47,15 +47,32 @@
           </span>
         </button>
 
-        <button class="accent-btn" @click="addFolder">
+        <button class="accent-btn" @click="addFolder" :disabled="scanStore.isScanning">
           <i class="fas fa-plus btn-icon"></i>
           {{ t("home.import.addFolder") }}
         </button>
       </div>
-      <button v-else class="accent-btn" @click="addFolder">
+      <button v-else class="accent-btn" @click="addFolder" :disabled="scanStore.isScanning">
         <i class="fas fa-plus btn-icon"></i>
         {{ t("home.import.addFolder") }}
       </button>
+    </div>
+
+    <!-- Scan Progress -->
+    <div v-if="scanStore.isScanning" class="scan-progress-panel">
+      <div class="scan-progress-row">
+        <div class="scan-progress-track">
+          <div class="scan-progress-fill" :style="{ width: scanStore.progress.pct + '%' }"></div>
+        </div>
+        <span class="scan-progress-pct">{{ scanStore.progress.pct }}%</span>
+      </div>
+      <div class="scan-progress-status">
+        <span v-if="scanStore.progress.total">
+          {{ t("media.scanningProgress", { current: scanStore.progress.current, total: scanStore.progress.total }) }}
+        </span>
+        <span v-else>{{ t("media.scanningPreparing") }}</span>
+        <span v-if="scanStore.progress.message" class="scan-progress-file"> — {{ scanStore.progress.message }}</span>
+      </div>
     </div>
 
     <!-- Grid View -->
@@ -66,15 +83,20 @@
           <button
             class="folder-card-delete"
             @click="removeFolder(folder.path)"
+            :disabled="removingFolders.has(folder.path) || scanStore.isFolderScanning(folder.path)"
             :title="t('table.removeFolder')"
           >
-            <i class="fas fa-trash-can"></i>
+            <span v-if="removingFolders.has(folder.path)" class="spinner"></span>
+            <i v-else class="fas fa-trash-can"></i>
           </button>
         </div>
         <div class="folder-card-name" :title="folder.path">
           {{ getFolderName(folder.path) }}
         </div>
         <div class="folder-card-path">{{ folder.path }}</div>
+        <span v-if="scanStore.isFolderScanning(folder.path)" class="folder-scanning-badge">
+          <span class="spinner"></span> {{ t("media.scanning") }}
+        </span>
         <div class="folder-card-divider"></div>
         <div class="folder-card-footer">
           <span>{{ folder.trackCount || 0 }} {{ t("labels.tracks") }}</span>
@@ -102,6 +124,9 @@
                 <div>
                   <div class="folder-row-name">{{ getFolderName(folder.path) }}</div>
                   <div class="folder-row-path">{{ folder.path }}</div>
+                  <span v-if="scanStore.isFolderScanning(folder.path)" class="folder-scanning-badge">
+                    <span class="spinner"></span> {{ t("media.scanning") }}
+                  </span>
                 </div>
               </div>
             </td>
@@ -111,9 +136,11 @@
               <button
                 class="folder-row-delete"
                 @click="removeFolder(folder.path)"
+                :disabled="removingFolders.has(folder.path) || scanStore.isFolderScanning(folder.path)"
                 :title="t('table.removeFolder')"
               >
-                <i class="fas fa-trash-can"></i>
+                <span v-if="removingFolders.has(folder.path)" class="spinner"></span>
+                <i v-else class="fas fa-trash-can"></i>
               </button>
             </td>
           </tr>
@@ -148,15 +175,17 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
+import { useLibraryScanStore } from "../store/libraryScan.js"
 
 const { t } = useI18n()
+const scanStore = useLibraryScanStore()
 
 const folders = ref([])
 const viewMode = ref("grid")
 const currentPage = ref(1)
 const itemsPerPage = ref(12)
-const isRescanning = ref(false)
 const lastScannedAt = ref(null)
+const removingFolders = ref(new Set())
 
 const totalFolderPages = computed(() =>
   Math.ceil(folders.value.length / itemsPerPage.value)
@@ -209,27 +238,37 @@ async function loadLastScanned() {
 }
 
 async function addFolder() {
-  folders.value = await window.api.addFolder()
-  currentPage.value = 1
-  await loadLastScanned()
+  scanStore.start("add")
+  try {
+    folders.value = await window.api.addFolder()
+    currentPage.value = 1
+    await loadLastScanned()
+  } finally {
+    scanStore.clear()
+  }
 }
 
 async function removeFolder(path) {
-  folders.value = await window.api.removeFolder(path)
-  if (paginatedFolders.value.length === 0 && currentPage.value > 1) {
-    currentPage.value--
+  removingFolders.value.add(path)
+  try {
+    folders.value = await window.api.removeFolder(path)
+    if (paginatedFolders.value.length === 0 && currentPage.value > 1) {
+      currentPage.value--
+    }
+  } finally {
+    removingFolders.value.delete(path)
   }
 }
 
 async function rescanLibrary() {
-  isRescanning.value = true
-  folders.value = await window.api.rescanLibrary()
-  await loadLastScanned()
-
-  setTimeout(() => {
-    isRescanning.value = false
+  scanStore.start("rescan")
+  try {
+    folders.value = await window.api.rescanLibrary()
+    await loadLastScanned()
     window.api.showToast?.(t("media.rescanComplete"), "success")
-  }, 500)
+  } finally {
+    scanStore.clear()
+  }
 }
 
 onMounted(() => {
@@ -622,6 +661,63 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Scan progress panel */
+.scan-progress-panel {
+  margin-bottom: var(--space-6);
+}
+
+.scan-progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.scan-progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.scan-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  filter: drop-shadow(0 0 4px var(--accent));
+  transition: width 0.2s ease;
+}
+
+.scan-progress-pct {
+  font-size: var(--font-size-xs);
+  color: var(--muted-text);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5em;
+  text-align: right;
+}
+
+.scan-progress-status {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--muted-text);
+}
+
+.scan-progress-file {
+  color: var(--text-color);
+}
+
+.folder-scanning-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--hover-bg);
+  color: var(--accent);
+  font-size: var(--font-size-xs);
 }
 
 .spinner {

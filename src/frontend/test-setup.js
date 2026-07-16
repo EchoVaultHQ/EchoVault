@@ -10,6 +10,7 @@ function buildApiMock() {
     removeFolder: vi.fn(),
     rescanLibrary: vi.fn(),
     getLastScannedAt: vi.fn(),
+    onLibraryScanProgress: vi.fn(() => () => {}),
 
     // tracks
     getTracks: vi.fn(),

@@ -3,7 +3,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { dialog, ipcMain } from "electron"
 import { extractMetadata } from "./scanner.js"
-import { checkReady, ensureEnhancerAssets } from "./downloader.js"
+import { checkReady, ensureEnhancerAssets, sha256File } from "./downloader.js"
 import {
   GET_TRACK_BY_ID,
   GET_TRACK_BY_PATH,
@@ -99,6 +99,8 @@ async function addEnhancedTrack(db, sourceTrack, flacPath) {
   const baseTitle = meta.title || sourceTrack.title || path.basename(flacPath)
   const title = baseTitle.endsWith(TITLE_SUFFIX) ? baseTitle : `${baseTitle}${TITLE_SUFFIX}`
 
+  const hash = await sha256File(flacPath)
+
   db.prepare(UPSERT_TRACK).run(
     sourceTrack.folder_id,
     artistId,
@@ -108,7 +110,8 @@ async function addEnhancedTrack(db, sourceTrack, flacPath) {
     artistName,
     meta.duration || 0,
     meta.cover || null,
-    fs.statSync(flacPath).size
+    fs.statSync(flacPath).size,
+    hash
   )
   db.prepare(MARK_TRACK_ENHANCED).run(flacPath)
 

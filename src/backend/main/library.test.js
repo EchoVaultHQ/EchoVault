@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { dialog } from "electron"
 import { createTestDb } from "../db/testDb.js"
-import { scanFolder } from "./scanner.js"
+import { scanFolder, countAudioFiles } from "./scanner.js"
 import { watchFolders } from "./watcher.js"
 import {
   addFolder,
@@ -17,35 +17,88 @@ import {
   getArtistByName,
 } from "./library.js"
 
-vi.mock("./scanner.js", () => ({ scanFolder: vi.fn() }))
+vi.mock("./scanner.js", () => ({ scanFolder: vi.fn(), countAudioFiles: vi.fn(() => 0) }))
 vi.mock("./watcher.js", () => ({ watchFolders: vi.fn() }))
 
 let db
+let fakeMainWindow
 
 beforeEach(() => {
   db = createTestDb()
   vi.clearAllMocks()
+  fakeMainWindow = { isDestroyed: () => false, webContents: { send: vi.fn() } }
 })
 
 describe("addFolder", () => {
   it("scans each selected folder and starts watching", async () => {
     dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["/music/a", "/music/b"] })
 
-    await addFolder({}, db)
+    await addFolder(fakeMainWindow, db)
 
-    expect(scanFolder).toHaveBeenCalledWith(db, "/music/a")
-    expect(scanFolder).toHaveBeenCalledWith(db, "/music/b")
+    expect(scanFolder).toHaveBeenCalledWith(db, "/music/a", expect.any(Function))
+    expect(scanFolder).toHaveBeenCalledWith(db, "/music/b", expect.any(Function))
     expect(watchFolders).toHaveBeenCalledWith(db)
   })
 
   it("does nothing but return the current folders when the dialog is canceled", async () => {
     dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
 
-    const result = await addFolder({}, db)
+    const result = await addFolder(fakeMainWindow, db)
 
     expect(scanFolder).not.toHaveBeenCalled()
     expect(watchFolders).not.toHaveBeenCalled()
     expect(result).toEqual([])
+  })
+
+  it("merges same-metadata duplicates left behind by the scan, not just at app launch", async () => {
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["/music/a"] })
+    // scanFolder is mocked (it doesn't touch the DB here), so pre-seed the
+    // rows it would otherwise have inserted: same title/album/artist, but
+    // different content_hash, i.e. the case scanning by hash alone can't merge.
+    db.prepare("INSERT INTO tracks (file_path, title, album, content_hash) VALUES (?, ?, ?, ?)").run(
+      "/music/a/song-v1.flac",
+      "Song",
+      "Album",
+      "hash-1"
+    )
+    db.prepare("INSERT INTO tracks (file_path, title, album, content_hash) VALUES (?, ?, ?, ?)").run(
+      "/music/a/song-v2.flac",
+      "Song",
+      "Album",
+      "hash-2"
+    )
+
+    await addFolder(fakeMainWindow, db)
+
+    expect(db.prepare("SELECT * FROM tracks").all()).toHaveLength(1)
+  })
+
+  it("streams scan-progress events as the mocked scanFolder reports files processed", async () => {
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["/music/a"] })
+    countAudioFiles.mockReturnValue(2)
+    scanFolder.mockImplementation(async (_db, folder, onFile) => {
+      onFile({ filePath: "/music/a/one.mp3" })
+      onFile({ filePath: "/music/a/two.mp3" })
+    })
+
+    await addFolder(fakeMainWindow, db)
+
+    expect(fakeMainWindow.webContents.send).toHaveBeenCalledWith("library:scan-progress", {
+      phase: "add",
+      current: 1,
+      total: 2,
+      pct: 50,
+      message: "one.mp3",
+      folderPath: "/music/a",
+    })
+    expect(fakeMainWindow.webContents.send).toHaveBeenCalledWith("library:scan-progress", {
+      phase: "add",
+      current: 2,
+      total: 2,
+      pct: 100,
+      message: "two.mp3",
+      folderPath: "/music/a",
+    })
   })
 })
 
@@ -71,6 +124,21 @@ describe("removeFolder", () => {
     expect(db.prepare("SELECT * FROM artists").all()).toEqual([])
     expect(watchFolders).toHaveBeenCalledWith(db)
   })
+
+  it("promotes a surviving location instead of deleting the track when its primary copy's folder is removed", () => {
+    const removedFolderId = db.prepare("INSERT INTO folders (path) VALUES (?)").run("/music").lastInsertRowid
+    db.prepare("INSERT INTO folders (path) VALUES (?)").run("/backup")
+    const trackId = db
+      .prepare("INSERT INTO tracks (folder_id, file_path, title, noOfPlays) VALUES (?, ?, ?, ?)")
+      .run(removedFolderId, "/music/a.mp3", "A", 4).lastInsertRowid
+    db.prepare("INSERT INTO track_locations (track_id, file_path) VALUES (?, ?)").run(trackId, "/backup/a.mp3")
+
+    removeFolder(db, "/music")
+
+    const tracks = db.prepare("SELECT * FROM tracks").all()
+    expect(tracks).toEqual([expect.objectContaining({ id: trackId, file_path: "/backup/a.mp3", noOfPlays: 4 })])
+    expect(db.prepare("SELECT * FROM track_locations").all()).toEqual([])
+  })
 })
 
 describe("rescanLibrary", () => {
@@ -78,11 +146,30 @@ describe("rescanLibrary", () => {
     db.prepare("INSERT INTO folders (path) VALUES (?)").run("/music/a")
     db.prepare("INSERT INTO folders (path) VALUES (?)").run("/music/b")
 
-    await rescanLibrary(db)
+    await rescanLibrary(fakeMainWindow, db)
 
-    expect(scanFolder).toHaveBeenCalledWith(db, "/music/a")
-    expect(scanFolder).toHaveBeenCalledWith(db, "/music/b")
+    expect(scanFolder).toHaveBeenCalledWith(db, "/music/a", expect.any(Function))
+    expect(scanFolder).toHaveBeenCalledWith(db, "/music/b", expect.any(Function))
     expect(watchFolders).toHaveBeenCalledWith(db)
+  })
+
+  it("streams scan-progress events with phase 'rescan'", async () => {
+    db.prepare("INSERT INTO folders (path) VALUES (?)").run("/music/a")
+    countAudioFiles.mockReturnValue(1)
+    scanFolder.mockImplementation(async (_db, folder, onFile) => {
+      onFile({ filePath: "/music/a/one.mp3" })
+    })
+
+    await rescanLibrary(fakeMainWindow, db)
+
+    expect(fakeMainWindow.webContents.send).toHaveBeenCalledWith("library:scan-progress", {
+      phase: "rescan",
+      current: 1,
+      total: 1,
+      pct: 100,
+      message: "one.mp3",
+      folderPath: "/music/a",
+    })
   })
 })
 

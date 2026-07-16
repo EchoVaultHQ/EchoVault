@@ -23,8 +23,23 @@ CREATE TABLE IF NOT EXISTS tracks (
   noOfPlays INTEGER DEFAULT 0,
   last_played_at TEXT,
   file_size INTEGER,
+  content_hash TEXT,
   FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
   FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE SET NULL
+);
+
+-- Extra copies of a song that already has a canonical row in `tracks`
+-- (same content_hash, different file_path) live here instead of creating
+-- a duplicate tracks row.
+CREATE TABLE IF NOT EXISTS track_locations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  track_id INTEGER NOT NULL,
+  folder_id INTEGER,
+  file_path TEXT UNIQUE,
+  file_size INTEGER,
+  added_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
+  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS artists (

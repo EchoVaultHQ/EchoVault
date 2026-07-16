@@ -59,8 +59,20 @@ export function initDB(dbPath = path.join(app.getPath("userData"), "sonicbox.db"
         noOfPlays INTEGER DEFAULT 0,
         last_played_at TEXT,
         file_size INTEGER,
+        content_hash TEXT,
         FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
         FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS track_locations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        track_id INTEGER NOT NULL,
+        folder_id INTEGER,
+        file_path TEXT UNIQUE,
+        file_size INTEGER,
+        added_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
+        FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
       );
     `
   }
@@ -93,6 +105,12 @@ export function initDB(dbPath = path.join(app.getPath("userData"), "sonicbox.db"
     if (!/duplicate column/i.test(err.message)) throw err
   }
 
+  try {
+    db.exec("ALTER TABLE tracks ADD COLUMN content_hash TEXT")
+  } catch (err) {
+    if (!/duplicate column/i.test(err.message)) throw err
+  }
+
   const indexStatements = [
     `CREATE INDEX IF NOT EXISTS idx_tracks_title_lower ON tracks(LOWER(title));`,
     `CREATE INDEX IF NOT EXISTS idx_tracks_artist_lower ON tracks(LOWER(artist));`,
@@ -103,6 +121,8 @@ export function initDB(dbPath = path.join(app.getPath("userData"), "sonicbox.db"
     `CREATE INDEX IF NOT EXISTS idx_tracks_file_path ON tracks(file_path);`,
     `CREATE INDEX IF NOT EXISTS idx_artists_name ON artists(name);`,
     `CREATE INDEX IF NOT EXISTS idx_tracks_plays ON tracks(noOfPlays DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_tracks_content_hash ON tracks(content_hash);`,
+    `CREATE INDEX IF NOT EXISTS idx_track_locations_track_id ON track_locations(track_id);`,
   ]
 
   for (const stmt of indexStatements) {
