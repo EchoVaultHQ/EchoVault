@@ -237,13 +237,24 @@ async function loadLastScanned() {
   lastScannedAt.value = await window.api.getLastScannedAt()
 }
 
+// Rescans (and small adds) can finish before the bar has a chance to animate -
+// keep the panel visible for at least this long so it doesn't just flash.
+const MIN_SCAN_DISPLAY_MS = 600
+
+async function waitMinDuration(startedAt, minMs = MIN_SCAN_DISPLAY_MS) {
+  const remaining = minMs - (Date.now() - startedAt)
+  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining))
+}
+
 async function addFolder() {
+  const startedAt = Date.now()
   scanStore.start("add")
   try {
     folders.value = await window.api.addFolder()
     currentPage.value = 1
     await loadLastScanned()
   } finally {
+    await waitMinDuration(startedAt)
     scanStore.clear()
   }
 }
@@ -261,12 +272,14 @@ async function removeFolder(path) {
 }
 
 async function rescanLibrary() {
+  const startedAt = Date.now()
   scanStore.start("rescan")
   try {
     folders.value = await window.api.rescanLibrary()
     await loadLastScanned()
     window.api.showToast?.(t("media.rescanComplete"), "success")
   } finally {
+    await waitMinDuration(startedAt)
     scanStore.clear()
   }
 }
